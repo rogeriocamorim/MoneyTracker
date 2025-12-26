@@ -68,40 +68,44 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
-function StatCard({ icon: Icon, label, value, trend, color, gradient, delay = 0 }) {
+function StatCard({ icon: Icon, label, value, trend, color, gradient }) {
   const isPositive = trend === 'up'
   
   return (
     <motion.div 
       variants={item}
-      className="glass-card rounded-2xl p-5 relative overflow-hidden group hover:border-[var(--color-border-hover)] transition-colors"
+      className="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group"
     >
       {/* Gradient glow effect */}
       <div 
-        className="absolute -top-12 -right-12 w-24 h-24 rounded-full opacity-20 blur-2xl group-hover:opacity-30 transition-opacity"
+        className="absolute -top-12 -right-12 w-24 h-24 rounded-full opacity-20 blur-2xl"
         style={{ background: gradient }}
       />
       
-      <div className="flex items-start justify-between mb-4 relative">
-        <div 
-          className="w-11 h-11 rounded-xl flex items-center justify-center"
-          style={{ background: `${color}15` }}
-        >
-          <Icon className="w-5 h-5" style={{ color }} />
-        </div>
-        {trend && (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
-            isPositive ? 'bg-[var(--color-success-muted)] text-[var(--color-success)]' : 'bg-[var(--color-danger-muted)] text-[var(--color-danger)]'
-          }`}>
-            {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+      <div className="flex items-center gap-3 sm:gap-0 sm:flex-col sm:items-start relative">
+        <div className="flex items-center justify-between w-full sm:mb-3">
+          <div 
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center"
+            style={{ background: `${color}15` }}
+          >
+            <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color }} />
           </div>
-        )}
+          {trend && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium sm:absolute sm:top-0 sm:right-0 ${
+              isPositive ? 'bg-[var(--color-success-muted)] text-[var(--color-success)]' : 'bg-[var(--color-danger-muted)] text-[var(--color-danger)]'
+            }`}>
+              {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 sm:flex-none">
+          <p className="text-[10px] sm:text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-0.5">{label}</p>
+          <p className="text-lg sm:text-2xl font-bold font-mono" style={{ color }}>
+            {value}
+          </p>
+        </div>
       </div>
-      
-      <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-2xl font-bold font-mono" style={{ color }}>
-        {value}
-      </p>
     </motion.div>
   )
 }
@@ -157,7 +161,7 @@ export default function Dashboard() {
       animate="show"
     >
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={TrendingUp}
           label="Income"
@@ -192,16 +196,16 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Income vs Expenses Trend */}
-        <motion.div variants={item} className="glass-card rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-6">
+        <motion.div variants={item} className="glass-card rounded-2xl p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4 sm:mb-6">
             <Sparkles className="w-5 h-5 text-[var(--color-accent)]" />
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
+            <h3 className="text-sm sm:text-base font-semibold text-[var(--color-text-primary)]">
               Cash Flow Trend
             </h3>
           </div>
-          <div style={{ width: '100%', height: 260 }}>
+          <div style={{ width: '100%', height: 220 }} className="sm:h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <defs>
@@ -261,12 +265,12 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Category Breakdown */}
-        <motion.div variants={item} className="glass-card rounded-2xl p-6">
-          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-6">
+        <motion.div variants={item} className="glass-card rounded-2xl p-4 sm:p-6">
+          <h3 className="text-sm sm:text-base font-semibold text-[var(--color-text-primary)] mb-4 sm:mb-6">
             Spending Breakdown
           </h3>
           {categoryTotals.length === 0 ? (
-            <div style={{ height: 260 }} className="flex flex-col items-center justify-center">
+            <div style={{ height: 200 }} className="sm:h-[260px] flex flex-col items-center justify-center">
               <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-hover)] flex items-center justify-center mb-4">
                 <TrendingDown className="w-8 h-8 text-[var(--color-text-muted)]" />
               </div>
@@ -321,8 +325,8 @@ export default function Dashboard() {
       </div>
 
       {/* Budget Progress */}
-      <motion.div variants={item} className="glass-card rounded-2xl p-6">
-        <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-6">
+      <motion.div variants={item} className="glass-card rounded-2xl p-4 sm:p-6">
+        <h3 className="text-sm sm:text-base font-semibold text-[var(--color-text-primary)] mb-4 sm:mb-6">
           Budget Progress
         </h3>
         {budgetChartData.length === 0 ? (
@@ -383,8 +387,8 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Recent Transactions */}
-      <motion.div variants={item} className="glass-card rounded-2xl p-6">
-        <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
+      <motion.div variants={item} className="glass-card rounded-2xl p-4 sm:p-6">
+        <h3 className="text-sm sm:text-base font-semibold text-[var(--color-text-primary)] mb-3 sm:mb-4">
           Recent Activity
         </h3>
         <div className="space-y-2">

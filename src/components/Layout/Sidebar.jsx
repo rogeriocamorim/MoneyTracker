@@ -6,7 +6,8 @@ import {
   Wallet, 
   PiggyBank, 
   Settings,
-  TrendingUp
+  TrendingUp,
+  X
 } from 'lucide-react'
 
 const navItems = [
@@ -17,88 +18,116 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   return (
-    <aside 
-      className="fixed left-0 top-0 h-screen bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border-r border-[var(--color-border)] flex flex-col z-50"
-      style={{ width: '240px' }}
-    >
-      {/* Logo */}
-      <div className="p-5 border-b border-[var(--color-border)]">
-        <motion.div 
-          className="flex items-center gap-3"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div 
-            className="w-10 h-10 rounded-xl flex items-center justify-center glow-accent"
-            style={{ background: 'var(--gradient-accent)' }}
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside 
+        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50 transition-transform duration-300 ease-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+        style={{ width: '280px' }}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-[var(--color-border)] flex items-center justify-between">
+          <motion.div 
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            <TrendingUp className="w-5 h-5 text-[var(--color-bg-primary)]" />
-          </div>
-          <div>
-            <h1 className="font-semibold text-base text-[var(--color-text-primary)]">MoneyTracker</h1>
-            <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Personal Finance</p>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-3 overflow-y-auto">
-        <ul className="space-y-1">
-          {navItems.map(({ to, icon: Icon, label }, index) => (
-            <motion.li 
-              key={to}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center glow-accent"
+              style={{ background: 'var(--gradient-accent)' }}
             >
-              <NavLink
-                to={to}
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 relative ${
-                    isActive
-                      ? 'text-[var(--color-accent)]'
-                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeNav"
-                        className="absolute inset-0 bg-[var(--color-accent-muted)] rounded-xl"
-                        initial={false}
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                      />
-                    )}
-                    <Icon className="w-5 h-5 relative z-10" />
-                    <span className="font-medium text-sm relative z-10">{label}</span>
-                    {isActive && (
-                      <motion.div
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full"
-                        style={{ background: 'var(--gradient-accent)' }}
-                        layoutId="activeIndicator"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                      />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            </motion.li>
-          ))}
-        </ul>
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-[var(--color-border)]">
-        <div className="px-3 py-2 rounded-xl bg-[var(--color-bg-card)] border border-[var(--color-border)]">
-          <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Storage</p>
-          <p className="text-xs text-[var(--color-text-secondary)]">Data saved locally</p>
+              <TrendingUp className="w-6 h-6 text-[var(--color-bg-primary)]" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg text-[var(--color-text-primary)]">MoneyTracker</h1>
+              <p className="text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider">Personal Finance</p>
+            </div>
+          </motion.div>
+          
+          {/* Close button - mobile only */}
+          <button 
+            onClick={onClose}
+            className="lg:hidden p-2 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors"
+          >
+            <X className="w-5 h-5 text-[var(--color-text-muted)]" />
+          </button>
         </div>
-      </div>
-    </aside>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <p className="px-4 mb-3 text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest font-medium">
+            Menu
+          </p>
+          <ul className="space-y-1">
+            {navItems.map(({ to, icon: Icon, label }, index) => (
+              <motion.li 
+                key={to}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <NavLink
+                  to={to}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `group flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 relative ${
+                      isActive
+                        ? 'text-[var(--color-accent)]'
+                        : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeNav"
+                          className="absolute inset-0 bg-[var(--color-accent-muted)] rounded-xl"
+                          initial={false}
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                        />
+                      )}
+                      <Icon className="w-6 h-6 relative z-10" />
+                      <span className="font-medium text-base relative z-10">{label}</span>
+                      {isActive && (
+                        <motion.div
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                          style={{ background: 'var(--gradient-accent)' }}
+                          layoutId="activeIndicator"
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                        />
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              </motion.li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-[var(--color-border)]">
+          <div className="px-4 py-3 rounded-xl bg-[var(--color-bg-card)] border border-[var(--color-border)]">
+            <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Storage</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">Data saved locally in browser</p>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
