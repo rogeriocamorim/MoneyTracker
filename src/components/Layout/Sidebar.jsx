@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   LayoutDashboard, 
   Receipt, 
@@ -21,25 +21,35 @@ const navItems = [
 export default function Sidebar({ isOpen, onClose, width = 280 }) {
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
+      {/* Mobile overlay - only shown when sidebar is open on mobile */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Sidebar - always visible on desktop (lg+), slide-in on mobile */}
       <aside 
-        className={`fixed left-0 top-0 h-full bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50 transition-transform duration-300 ease-out
-          lg:translate-x-0
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
-        style={{ width: `${width}px` }}
+        className="fixed left-0 top-0 h-full bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50"
+        style={{ 
+          width: `${width}px`,
+          transform: `translateX(${isOpen ? '0' : '-100%'})`,
+          transition: 'transform 0.3s ease'
+        }}
       >
+        {/* Override transform for desktop - always show */}
+        <style>{`
+          @media (min-width: 1024px) {
+            aside { transform: translateX(0) !important; }
+          }
+        `}</style>
+
         {/* Header */}
         <div className="p-5 lg:p-6 border-b border-[var(--color-border)] flex items-center justify-between">
           <motion.div 
@@ -84,7 +94,12 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
               >
                 <NavLink
                   to={to}
-                  onClick={onClose}
+                  onClick={() => {
+                    // Only close on mobile
+                    if (window.innerWidth < 1024) {
+                      onClose()
+                    }
+                  }}
                   className={({ isActive }) =>
                     `group flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 relative ${
                       isActive

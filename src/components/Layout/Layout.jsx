@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
@@ -10,9 +10,28 @@ const SIDEBAR_WIDTH = 280
 export default function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  // Check if we're on desktop (lg breakpoint = 1024px)
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024)
+    }
+    
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    return () => window.removeEventListener('resize', checkDesktop)
+  }, [])
+
+  // Close sidebar on route change (mobile only)
+  useEffect(() => {
+    if (!isDesktop) {
+      setSidebarOpen(false)
+    }
+  }, [location.pathname, isDesktop])
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen min-h-dvh">
       <Toaster
         position="top-center"
         toastOptions={{
@@ -46,37 +65,31 @@ export default function Layout() {
         width={SIDEBAR_WIDTH}
       />
       
-      {/* Main content - with left margin on desktop */}
+      {/* Main content area - offset on desktop */}
       <div 
-        className="min-h-screen transition-[margin] duration-300"
-        style={{ marginLeft: 0 }}
+        style={{ 
+          marginLeft: isDesktop ? `${SIDEBAR_WIDTH}px` : 0,
+          minHeight: '100vh',
+          transition: 'margin-left 0.3s ease'
+        }}
       >
-        {/* Desktop spacer */}
-        <div 
-          className="hidden lg:block fixed top-0 left-0 h-full pointer-events-none"
-          style={{ width: SIDEBAR_WIDTH }}
-        />
-        
-        {/* Content wrapper with margin on desktop */}
-        <div className="lg:pl-[280px]">
-          <Header onMenuClick={() => setSidebarOpen(true)} />
-          <main className="p-4 sm:p-6 lg:p-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </main>
-        </div>
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="p-4 sm:p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        </main>
         
         {/* Bottom safe area for iOS */}
-        <div className="h-safe-area-inset-bottom" />
+        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
       </div>
     </div>
   )
