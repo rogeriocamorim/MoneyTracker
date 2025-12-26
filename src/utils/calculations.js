@@ -55,13 +55,19 @@ export const getTotal = (items) => {
 export const getBudgetProgress = (expenses, budgets) => {
   const totals = getTotalByCategory(expenses)
   
-  return Object.keys(budgets).map(category => ({
-    category,
-    budget: budgets[category] || 0,
-    spent: totals[category] || 0,
-    remaining: (budgets[category] || 0) - (totals[category] || 0),
-    percentage: budgets[category] ? Math.min(100, ((totals[category] || 0) / budgets[category]) * 100) : 0,
-  }))
+  return Object.keys(budgets).map(category => {
+    const budget = budgets[category] || 0
+    const spent = totals[category] || 0
+    const percentage = budget > 0 ? (spent / budget) * 100 : 0
+    
+    return {
+      category,
+      budget,
+      spent,
+      remaining: budget - spent,
+      percentage: Math.round(percentage * 100) / 100, // Round to 2 decimal places
+    }
+  })
 }
 
 export const getMonthlyTrend = (expenses, months = 6) => {

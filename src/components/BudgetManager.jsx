@@ -47,7 +47,7 @@ export default function BudgetManager() {
 
   const totalBudget = Object.values(state.budgets).reduce((sum, b) => sum + b, 0)
   const totalSpent = budgetProgress.reduce((sum, b) => sum + b.spent, 0)
-  const overallPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+  const overallPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
 
   const handleEdit = (categoryId) => {
     setEditingBudget({ category: categoryId, amount: state.budgets[categoryId] || 0 })
@@ -89,7 +89,7 @@ export default function BudgetManager() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">Monthly Overview</h3>
           <span className={`badge ${overallPercentage >= 100 ? 'badge-danger' : overallPercentage >= 80 ? 'badge-warning' : 'badge-success'}`}>
-            {overallPercentage}% used
+            {overallPercentage.toFixed(2)}% used
           </span>
         </div>
         <ProgressBar spent={totalSpent} budget={totalBudget} />
@@ -137,7 +137,7 @@ export default function BudgetManager() {
                       </div>
                     </div>
                     <span className={`font-mono font-semibold ${isOver ? 'text-[var(--color-danger)]' : isWarning ? 'text-[var(--color-warning)]' : 'text-[var(--color-success)]'}`}>
-                      {item.percentage}%
+                      {item.percentage.toFixed(2)}%
                     </span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleEdit(item.category)} className="btn btn-ghost p-2"><Pencil className="w-4 h-4" /></button>
