@@ -5,6 +5,8 @@ import { Toaster } from 'react-hot-toast'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
+const SIDEBAR_WIDTH = 280
+
 export default function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -38,24 +40,40 @@ export default function Layout() {
         }}
       />
       
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+        width={SIDEBAR_WIDTH}
+      />
       
       {/* Main content - with left margin on desktop */}
-      <div className="lg:ml-[280px] min-h-screen">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-4 sm:p-6 lg:p-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
+      <div 
+        className="min-h-screen transition-[margin] duration-300"
+        style={{ marginLeft: 0 }}
+      >
+        {/* Desktop spacer */}
+        <div 
+          className="hidden lg:block fixed top-0 left-0 h-full pointer-events-none"
+          style={{ width: SIDEBAR_WIDTH }}
+        />
+        
+        {/* Content wrapper with margin on desktop */}
+        <div className="lg:pl-[280px]">
+          <Header onMenuClick={() => setSidebarOpen(true)} />
+          <main className="p-4 sm:p-6 lg:p-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
         
         {/* Bottom safe area for iOS */}
         <div className="h-safe-area-inset-bottom" />

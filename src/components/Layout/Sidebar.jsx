@@ -18,7 +18,7 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, width = 280 }) {
   return (
     <>
       {/* Mobile overlay */}
@@ -34,13 +34,14 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50 transition-transform duration-300 ease-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        className={`fixed left-0 top-0 h-full bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50 transition-transform duration-300 ease-out
+          lg:translate-x-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
-        style={{ width: '280px' }}
+        style={{ width: `${width}px` }}
       >
         {/* Header */}
-        <div className="p-6 border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="p-5 lg:p-6 border-b border-[var(--color-border)] flex items-center justify-between">
           <motion.div 
             className="flex items-center gap-3"
             initial={{ opacity: 0, x: -20 }}
@@ -62,18 +63,18 @@ export default function Sidebar({ isOpen, onClose }) {
           {/* Close button - mobile only */}
           <button 
             onClick={onClose}
-            className="lg:hidden p-2 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors"
+            className="lg:hidden p-3 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors"
           >
-            <X className="w-5 h-5 text-[var(--color-text-muted)]" />
+            <X className="w-6 h-6 text-[var(--color-text-muted)]" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <p className="px-4 mb-3 text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest font-medium">
+        <nav className="flex-1 p-4 lg:p-5 overflow-y-auto">
+          <p className="px-4 mb-4 text-[11px] text-[var(--color-text-muted)] uppercase tracking-widest font-semibold">
             Menu
           </p>
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {navItems.map(({ to, icon: Icon, label }, index) => (
               <motion.li 
                 key={to}
@@ -102,11 +103,11 @@ export default function Sidebar({ isOpen, onClose }) {
                           transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                         />
                       )}
-                      <Icon className="w-6 h-6 relative z-10" />
-                      <span className="font-medium text-base relative z-10">{label}</span>
+                      <Icon className="w-7 h-7 relative z-10" strokeWidth={1.5} />
+                      <span className="font-semibold text-base relative z-10">{label}</span>
                       {isActive && (
                         <motion.div
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
                           style={{ background: 'var(--gradient-accent)' }}
                           layoutId="activeIndicator"
                           transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
@@ -121,10 +122,10 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[var(--color-border)]">
+        <div className="p-4 lg:p-5 border-t border-[var(--color-border)]">
           <div className="px-4 py-3 rounded-xl bg-[var(--color-bg-card)] border border-[var(--color-border)]">
             <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Storage</p>
-            <p className="text-sm text-[var(--color-text-secondary)]">Data saved locally in browser</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">Data saved locally</p>
           </div>
         </div>
       </aside>
