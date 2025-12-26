@@ -174,8 +174,8 @@ export default function Dashboard() {
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             Income vs Expenses (6 Months)
           </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ width: '100%', height: 256 }}>
+            <ResponsiveContainer>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis 
@@ -217,12 +217,12 @@ export default function Dashboard() {
             Expenses by Category
           </h3>
           {categoryTotals.length === 0 ? (
-            <div className="h-64 flex items-center justify-center">
+            <div style={{ height: 256 }} className="flex items-center justify-center">
               <p className="text-[var(--color-text-muted)]">No expenses this month</p>
             </div>
           ) : (
-            <div className="h-64 flex">
-              <div className="flex-1">
+            <div style={{ height: 256 }} className="flex">
+              <div className="flex-1" style={{ minWidth: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -276,8 +276,8 @@ export default function Dashboard() {
             Set up budgets in the Budget page to see your progress here
           </p>
         ) : (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ width: '100%', height: 256 }}>
+            <ResponsiveContainer>
               <BarChart data={budgetProgress} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis 
