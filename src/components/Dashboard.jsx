@@ -25,7 +25,7 @@ import {
   Legend
 } from 'recharts'
 import { useMoney } from '../context/MoneyContext'
-import { expenseCategories, getCategoryById } from '../data/categories'
+import { expenseCategories, getCategoryById, getAllCategories } from '../data/categories'
 import { 
   formatCurrency, 
   getMonthlyExpenses, 
@@ -97,13 +97,15 @@ export default function Dashboard() {
   const totalBudget = Object.values(state.budgets).reduce((sum, b) => sum + b, 0)
   const budgetPercentage = totalBudget > 0 ? Math.round((totalExpenses / totalBudget) * 100) : 0
   
+  const allCategories = getAllCategories(state.customCategories)
+  
   const categoryTotals = useMemo(() => {
     const totals = getTotalByCategory(monthlyExpenses)
-    return expenseCategories
+    return allCategories
       .map(cat => ({ name: cat.name, value: totals[cat.id] || 0, color: cat.color, id: cat.id }))
       .filter(cat => cat.value > 0)
       .sort((a, b) => b.value - a.value)
-  }, [monthlyExpenses])
+  }, [monthlyExpenses, allCategories])
 
   const trendData = useMemo(() => getCombinedTrend(state.expenses, state.income, 6), [state.expenses, state.income])
 
@@ -113,8 +115,8 @@ export default function Dashboard() {
       .filter(b => b.budget > 0)
       .sort((a, b) => b.percentage - a.percentage)
       .slice(0, 5)
-      .map(item => ({ ...item, name: getCategoryById(item.category)?.name || item.category }))
-  }, [monthlyExpenses, state.budgets])
+      .map(item => ({ ...item, name: getCategoryById(item.category, state.customCategories)?.name || item.category }))
+  }, [monthlyExpenses, state.budgets, state.customCategories])
 
   const currentMonth = format(new Date(), 'MMMM yyyy')
 
@@ -264,7 +266,7 @@ export default function Dashboard() {
             .slice(0, 5)
             .map(tx => {
               const isIncome = tx.isIncome
-              const category = isIncome ? null : getCategoryById(tx.category)
+              const category = isIncome ? null : getCategoryById(tx.category, state.customCategories)
               return (
                 <div key={tx.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: isIncome ? 'var(--color-success-muted)' : `${category?.color}20` }}>

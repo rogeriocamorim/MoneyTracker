@@ -11,7 +11,8 @@ import {
   BarChart3,
   Sparkles,
   Plus,
-  Trash2
+  Trash2,
+  Edit3
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
@@ -24,6 +25,12 @@ const features = [
   { icon: PiggyBank, title: 'Set Budgets', description: 'Create monthly limits for each category' },
   { icon: BarChart3, title: 'View Insights', description: 'Visualize your finances with charts' },
 ]
+
+// Generate a random color for custom categories
+const randomColor = () => {
+  const colors = ['#f97316', '#3b82f6', '#eab308', '#a855f7', '#ec4899', '#ef4444', '#14b8a6', '#22c55e', '#06b6d4', '#8b5cf6']
+  return colors[Math.floor(Math.random() * colors.length)]
+}
 
 // Step 1: Welcome
 function WelcomeStep({ onNext, onImport, isImporting, importSuccess }) {
@@ -132,20 +139,33 @@ function WelcomeStep({ onNext, onImport, isImporting, importSuccess }) {
 
 // Step 2: Budget Setup
 function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplete }) {
+  const [isCustom, setIsCustom] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [customCategoryName, setCustomCategoryName] = useState('')
   const [amount, setAmount] = useState('')
 
-  const usedCategories = Object.keys(budgets)
-  const availableCategories = expenseCategories.filter(cat => !usedCategories.includes(cat.id))
+  const usedCategoryIds = Object.keys(budgets)
+  const availableCategories = expenseCategories.filter(cat => !usedCategoryIds.includes(cat.id))
 
   const handleAddBudget = () => {
-    if (!selectedCategory || !amount) return
-    onUpdateBudget(selectedCategory, parseFloat(amount))
-    setSelectedCategory('')
+    if (!amount) return
+    
+    if (isCustom) {
+      if (!customCategoryName.trim()) return
+      // Create a custom category ID from the name
+      const customId = 'custom_' + customCategoryName.toLowerCase().replace(/\s+/g, '_')
+      onUpdateBudget(customId, parseFloat(amount), customCategoryName.trim(), randomColor())
+      setCustomCategoryName('')
+    } else {
+      if (!selectedCategory) return
+      const cat = expenseCategories.find(c => c.id === selectedCategory)
+      onUpdateBudget(selectedCategory, parseFloat(amount), cat?.name, cat?.color)
+      setSelectedCategory('')
+    }
     setAmount('')
   }
 
-  const totalBudget = Object.values(budgets).reduce((sum, b) => sum + b, 0)
+  const totalBudget = Object.values(budgets).reduce((sum, b) => sum + (typeof b === 'object' ? b.amount : b), 0)
 
   return (
     <motion.div
@@ -165,17 +185,44 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
 
       {/* Add budget form */}
       <div className="card mb-4">
-        <div className="grid grid-cols-1 gap-3 mb-3">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="input"
+        {/* Toggle between predefined and custom */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setIsCustom(false)}
+            className={`btn flex-1 ${!isCustom ? 'btn-primary' : 'btn-secondary'}`}
           >
-            <option value="">Select category...</option>
-            {availableCategories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+            Predefined
+          </button>
+          <button
+            onClick={() => setIsCustom(true)}
+            className={`btn flex-1 ${isCustom ? 'btn-primary' : 'btn-secondary'}`}
+          >
+            <Edit3 className="w-4 h-4" />
+            Custom
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 mb-3">
+          {isCustom ? (
+            <input
+              type="text"
+              value={customCategoryName}
+              onChange={(e) => setCustomCategoryName(e.target.value)}
+              placeholder="Enter category name..."
+              className="input"
+            />
+          ) : (
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="input"
+            >
+              <option value="">Select category...</option>
+              {availableCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          )}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">$</span>
@@ -191,7 +238,7 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
             </div>
             <button
               onClick={handleAddBudget}
-              disabled={!selectedCategory || !amount}
+              disabled={!amount || (isCustom ? !customCategoryName.trim() : !selectedCategory)}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
@@ -216,25 +263,29 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
 
       {/* Budget list */}
       <div className="card mb-4" style={{ padding: 0, maxHeight: '240px', overflowY: 'auto' }}>
-        {usedCategories.length === 0 ? (
+        {usedCategoryIds.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-[var(--color-text-muted)] text-[13px]">No budgets added yet</p>
             <p className="text-[var(--color-text-muted)] text-[11px] mt-1">Add at least one budget to continue</p>
           </div>
         ) : (
           <div>
-            {usedCategories.map((catId, i) => {
-              const cat = expenseCategories.find(c => c.id === catId)
+            {usedCategoryIds.map((catId, i) => {
+              const budgetData = budgets[catId]
+              const name = typeof budgetData === 'object' ? budgetData.name : (expenseCategories.find(c => c.id === catId)?.name || catId)
+              const color = typeof budgetData === 'object' ? budgetData.color : (expenseCategories.find(c => c.id === catId)?.color || '#6b7280')
+              const amount = typeof budgetData === 'object' ? budgetData.amount : budgetData
+              
               return (
                 <div key={catId} className={`flex items-center gap-3 p-3 ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${cat?.color}20` }}>
-                    <span className="text-[14px]" style={{ color: cat?.color }}>$</span>
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+                    <span className="text-[14px] font-bold" style={{ color }}>$</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[var(--color-text-primary)] truncate">{cat?.name}</p>
+                    <p className="text-[13px] font-medium text-[var(--color-text-primary)] truncate">{name}</p>
                   </div>
                   <span className="font-mono text-[14px] text-[var(--color-accent)]">
-                    ${budgets[catId].toFixed(2)}
+                    ${amount.toFixed(2)}
                   </span>
                   <button
                     onClick={() => onRemoveBudget(catId)}
@@ -250,7 +301,7 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
       </div>
 
       {/* Total */}
-      {usedCategories.length > 0 && (
+      {usedCategoryIds.length > 0 && (
         <div className="flex items-center justify-between py-3 px-4 mb-4 rounded-xl bg-[var(--color-bg-muted)]">
           <span className="text-[var(--color-text-muted)]">Total Monthly Budget</span>
           <span className="font-mono font-semibold text-lg text-[var(--color-accent)]">${totalBudget.toFixed(2)}</span>
@@ -267,7 +318,7 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
           onClick={onComplete}
           className="btn btn-primary flex-1 py-3"
         >
-          {usedCategories.length === 0 ? 'Skip for Now' : 'Complete Setup'}
+          {usedCategoryIds.length === 0 ? 'Skip for Now' : 'Complete Setup'}
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
@@ -280,7 +331,7 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
 }
 
 export default function Onboarding() {
-  const { completeSetup, dispatch, setBudget, removeBudget } = useMoney()
+  const { completeSetup, dispatch, setBudget } = useMoney()
   const [step, setStep] = useState(1)
   const [isImporting, setIsImporting] = useState(false)
   const [importSuccess, setImportSuccess] = useState(false)
@@ -308,8 +359,11 @@ export default function Onboarding() {
     e.target.value = ''
   }
 
-  const handleUpdateBudget = (category, amount) => {
-    setBudgets(prev => ({ ...prev, [category]: amount }))
+  const handleUpdateBudget = (categoryId, amount, name, color) => {
+    setBudgets(prev => ({ 
+      ...prev, 
+      [categoryId]: { amount, name, color } 
+    }))
   }
 
   const handleRemoveBudget = (category) => {
@@ -321,9 +375,19 @@ export default function Onboarding() {
 
   const handleComplete = () => {
     // Save all budgets to context
-    Object.entries(budgets).forEach(([category, amount]) => {
-      setBudget(category, amount)
+    Object.entries(budgets).forEach(([categoryId, data]) => {
+      setBudget(categoryId, data.amount)
     })
+    
+    // Also save custom categories if any
+    const customCategories = Object.entries(budgets)
+      .filter(([id]) => id.startsWith('custom_'))
+      .map(([id, data]) => ({ id, name: data.name, color: data.color }))
+    
+    if (customCategories.length > 0) {
+      dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: customCategories })
+    }
+    
     completeSetup()
     toast.success('Welcome to MoneyTracker!')
   }

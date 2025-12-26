@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus } from 'lucide-react'
+import { X, Save, Plus, Edit3 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
-import { expenseCategories, getCategoryById } from '../data/categories'
+import { expenseCategories, getCategoryById, getAllCategories } from '../data/categories'
+
+// Generate a random color for custom categories
+const randomColor = () => {
+  const colors = ['#f97316', '#3b82f6', '#eab308', '#a855f7', '#ec4899', '#ef4444', '#14b8a6', '#22c55e', '#06b6d4', '#8b5cf6']
+  return colors[Math.floor(Math.random() * colors.length)]
+}
 
 export default function BudgetForm({ budget = null, onClose }) {
-  const { setBudget, state } = useMoney()
+  const { setBudget, addCustomCategory, state } = useMoney()
   const isEditing = !!budget
 
+  const [isCustom, setIsCustom] = useState(false)
+  const [customCategoryName, setCustomCategoryName] = useState('')
   const [formData, setFormData] = useState({
     category: '',
     amount: '',
   })
+
+  // Get all categories including custom ones
+  const allCategories = getAllCategories(state.customCategories)
+  const usedCategories = Object.keys(state.budgets)
+  const availableCategories = allCategories.filter(cat => 
+    !usedCategories.includes(cat.id) || (budget && budget.category === cat.id)
+  )
 
   useEffect(() => {
     if (budget) {
@@ -20,23 +35,49 @@ export default function BudgetForm({ budget = null, onClose }) {
         category: budget.category,
         amount: budget.amount.toString(),
       })
+      // Check if it's a custom category
+      if (budget.category.startsWith('custom_')) {
+        setIsCustom(true)
+        const customCat = state.customCategories.find(c => c.id === budget.category)
+        setCustomCategoryName(customCat?.name || '')
+      }
     } else {
-      // Find first category without a budget
-      const usedCategories = Object.keys(state.budgets)
-      const availableCategory = expenseCategories.find(cat => !usedCategories.includes(cat.id))
-      if (availableCategory) {
-        setFormData(prev => ({ ...prev, category: availableCategory.id }))
+      // Find first available category
+      if (availableCategories.length > 0) {
+        setFormData(prev => ({ ...prev, category: availableCategories[0].id }))
       }
     }
-  }, [budget, state.budgets])
+  }, [budget, state.budgets, state.customCategories])
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!formData.category) {
+    
+    let categoryId = formData.category
+    
+    if (isCustom && !isEditing) {
+      if (!customCategoryName.trim()) {
+        toast.error('Please enter a category name')
+        return
+      }
+      // Create custom category ID
+      categoryId = 'custom_' + customCategoryName.toLowerCase().replace(/\s+/g, '_')
+      
+      // Add custom category if it doesn't exist
+      if (!state.customCategories.some(c => c.id === categoryId)) {
+        addCustomCategory({
+          id: categoryId,
+          name: customCategoryName.trim(),
+          color: randomColor()
+        })
+      }
+    }
+    
+    if (!categoryId) {
       toast.error('Please select a category')
       return
     }
-    setBudget(formData.category, parseFloat(formData.amount))
+    
+    setBudget(categoryId, parseFloat(formData.amount))
     toast.success(isEditing ? 'Budget updated' : 'Budget added')
     onClose()
   }
@@ -46,11 +87,7 @@ export default function BudgetForm({ budget = null, onClose }) {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const selectedCategory = getCategoryById(formData.category)
-  const usedCategories = Object.keys(state.budgets)
-  const availableCategories = expenseCategories.filter(cat => 
-    !usedCategories.includes(cat.id) || (budget && budget.category === cat.id)
-  )
+  const selectedCategory = getCategoryById(formData.category, state.customCategories)
 
   return (
     <AnimatePresence>
@@ -83,25 +120,56 @@ export default function BudgetForm({ budget = null, onClose }) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Toggle for custom category (only when adding new) */}
+            {!isEditing && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setIsCustom(false)}
+                  className={`btn flex-1 ${!isCustom ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  Predefined
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCustom(true)}
+                  className={`btn flex-1 ${isCustom ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Custom
+                </button>
+              </div>
+            )}
+
             {/* Category */}
             <div>
               <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
                 Category
               </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                disabled={isEditing}
-                className="input"
-                style={{ borderLeft: selectedCategory ? `4px solid ${selectedCategory.color}` : undefined }}
-              >
-                <option value="">Select category</option>
-                {availableCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+              {isCustom && !isEditing ? (
+                <input
+                  type="text"
+                  value={customCategoryName}
+                  onChange={(e) => setCustomCategoryName(e.target.value)}
+                  placeholder="Enter category name..."
+                  className="input"
+                />
+              ) : (
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                  disabled={isEditing}
+                  className="input"
+                  style={{ borderLeft: selectedCategory ? `4px solid ${selectedCategory.color}` : undefined }}
+                >
+                  <option value="">Select category</option>
+                  {availableCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              )}
               {isEditing && (
                 <p className="text-[12px] text-[var(--color-text-muted)] mt-1">Category cannot be changed when editing</p>
               )}

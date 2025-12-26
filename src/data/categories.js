@@ -34,7 +34,29 @@ export const incomeSources = [
 // No default budgets - user sets these up during onboarding or manually
 export const defaultBudgets = {}
 
-export const getCategoryById = (id) => expenseCategories.find(c => c.id === id)
+// Get category by ID, checking both predefined and custom categories
+export const getCategoryById = (id, customCategories = []) => {
+  // First check predefined categories
+  const predefined = expenseCategories.find(c => c.id === id)
+  if (predefined) return predefined
+  
+  // Then check custom categories
+  const custom = customCategories.find(c => c.id === id)
+  if (custom) return { ...custom, icon: 'Tag' } // Custom categories use Tag icon
+  
+  // Return a fallback for unknown categories
+  if (id) {
+    return { id, name: id.replace(/^custom_/, '').replace(/_/g, ' '), icon: 'Tag', color: '#6b7280' }
+  }
+  
+  return null
+}
+
+// Get all categories (predefined + custom)
+export const getAllCategories = (customCategories = []) => {
+  const customWithIcon = customCategories.map(c => ({ ...c, icon: 'Tag' }))
+  return [...expenseCategories, ...customWithIcon]
+}
+
 export const getPaymentMethodById = (id) => paymentMethods.find(p => p.id === id)
 export const getIncomeSourceById = (id) => incomeSources.find(s => s.id === id)
-

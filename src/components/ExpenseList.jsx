@@ -1,18 +1,18 @@
 import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
-import { getCategoryById, getPaymentMethodById, expenseCategories } from '../data/categories'
+import { getCategoryById, getPaymentMethodById, getAllCategories } from '../data/categories'
 import { formatCurrency, getMonthlyExpenses, getTotal } from '../utils/calculations'
 import ExpenseForm from './ExpenseForm'
 import * as LucideIcons from 'lucide-react'
 
-function CategoryIcon({ categoryId }) {
-  const category = getCategoryById(categoryId)
+function CategoryIcon({ categoryId, customCategories }) {
+  const category = getCategoryById(categoryId, customCategories)
   if (!category) return null
-  const Icon = LucideIcons[category.icon]
+  const Icon = LucideIcons[category.icon] || Tag
   return Icon ? <Icon className="w-5 h-5" style={{ color: category.color }} /> : null
 }
 
@@ -24,6 +24,8 @@ export default function ExpenseList() {
   const [filterCategory, setFilterCategory] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'))
 
+  const allCategories = getAllCategories(state.customCategories)
+
   const filteredExpenses = useMemo(() => {
     let expenses = [...state.expenses]
     const [year, month] = selectedMonth.split('-').map(Number)
@@ -31,12 +33,12 @@ export default function ExpenseList() {
     if (searchTerm) {
       expenses = expenses.filter(e => 
         e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getCategoryById(e.category)?.name.toLowerCase().includes(searchTerm.toLowerCase())
+        getCategoryById(e.category, state.customCategories)?.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
     if (filterCategory) expenses = expenses.filter(e => e.category === filterCategory)
     return expenses.sort((a, b) => new Date(b.date) - new Date(a.date))
-  }, [state.expenses, searchTerm, filterCategory, selectedMonth])
+  }, [state.expenses, state.customCategories, searchTerm, filterCategory, selectedMonth])
 
   const totalExpenses = getTotal(filteredExpenses)
 
@@ -66,7 +68,7 @@ export default function ExpenseList() {
         </div>
         <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="input" style={{ width: 'auto' }}>
           <option value="">All Categories</option>
-          {expenseCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+          {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
         </select>
       </div>
 
@@ -79,12 +81,12 @@ export default function ExpenseList() {
         ) : (
           <div>
             {filteredExpenses.map((expense, i) => {
-              const category = getCategoryById(expense.category)
+              const category = getCategoryById(expense.category, state.customCategories)
               const paymentMethod = getPaymentMethodById(expense.paymentMethod)
               return (
                 <div key={expense.id} className={`flex items-center gap-4 p-4 hover:bg-[var(--color-bg-hover)] transition-colors group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color}15` }}>
-                    <CategoryIcon categoryId={expense.category} />
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#6b7280'}15` }}>
+                    <CategoryIcon categoryId={expense.category} customCategories={state.customCategories} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[var(--color-text-primary)] truncate">{expense.description || category?.name}</p>

@@ -4,16 +4,19 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Save, Plus, CreditCard, Landmark } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
-import { expenseCategories, paymentMethods } from '../data/categories'
+import { expenseCategories, paymentMethods, getAllCategories, getCategoryById } from '../data/categories'
 
 export default function ExpenseForm({ expense = null, onClose }) {
-  const { addExpense, updateExpense } = useMoney()
+  const { state, addExpense, updateExpense } = useMoney()
   const isEditing = !!expense
+  
+  // Combine predefined and custom categories
+  const allCategories = getAllCategories(state.customCategories)
 
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     amount: '',
-    category: 'food',
+    category: allCategories[0]?.id || 'food',
     description: '',
     paymentMethod: 'bank',
   })
@@ -48,7 +51,7 @@ export default function ExpenseForm({ expense = null, onClose }) {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const selectedCategory = expenseCategories.find(c => c.id === formData.category)
+  const selectedCategory = getCategoryById(formData.category, state.customCategories)
 
   return (
     <AnimatePresence>
@@ -114,9 +117,9 @@ export default function ExpenseForm({ expense = null, onClose }) {
                   onChange={handleChange}
                   required
                   className="input"
-                  style={{ borderLeft: `4px solid ${selectedCategory?.color}` }}
+                  style={{ borderLeft: `4px solid ${selectedCategory?.color || '#6b7280'}` }}
                 >
-                  {expenseCategories.map(cat => (
+                  {allCategories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>

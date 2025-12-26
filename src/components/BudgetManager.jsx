@@ -1,17 +1,17 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, Target, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Target, AlertTriangle, CheckCircle, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
-import { expenseCategories, getCategoryById } from '../data/categories'
+import { getCategoryById, getAllCategories } from '../data/categories'
 import { formatCurrency, getMonthlyExpenses, getBudgetProgress } from '../utils/calculations'
 import * as LucideIcons from 'lucide-react'
 import BudgetForm from './BudgetForm'
 
-function CategoryIcon({ categoryId }) {
-  const category = getCategoryById(categoryId)
+function CategoryIcon({ categoryId, customCategories }) {
+  const category = getCategoryById(categoryId, customCategories)
   if (!category) return null
-  const Icon = LucideIcons[category.icon]
+  const Icon = LucideIcons[category.icon] || Tag
   return Icon ? <Icon className="w-5 h-5" style={{ color: category.color }} /> : null
 }
 
@@ -112,19 +112,19 @@ export default function BudgetManager() {
         ) : (
           <div>
             {budgetProgress.map((item, i) => {
-              const category = getCategoryById(item.category)
+              const category = getCategoryById(item.category, state.customCategories)
               const isOver = item.spent > item.budget
               const isWarning = item.percentage >= 80 && !isOver
               
               return (
                 <div key={item.category} className={`p-4 group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
                   <div className="flex items-center gap-4 mb-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color}15` }}>
-                      <CategoryIcon categoryId={item.category} />
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#6b7280'}15` }}>
+                      <CategoryIcon categoryId={item.category} customCategories={state.customCategories} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-[var(--color-text-primary)]">{category?.name}</p>
+                        <p className="font-medium text-[var(--color-text-primary)]">{category?.name || item.category}</p>
                         {isOver && <AlertTriangle className="w-4 h-4 text-[var(--color-danger)]" />}
                         {!isOver && item.percentage < 50 && <CheckCircle className="w-4 h-4 text-[var(--color-success)]" />}
                       </div>
