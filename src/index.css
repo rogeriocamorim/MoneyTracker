@@ -1,0 +1,76 @@
+/* Custom font import - JetBrains Mono for a modern, technical aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  /* Deep teal/emerald color scheme for finance app */
+  --color-bg-primary: #0a0f0d;
+  --color-bg-secondary: #111916;
+  --color-bg-card: #151d19;
+  --color-bg-hover: #1a2420;
+  
+  --color-accent: #10b981;
+  --color-accent-hover: #34d399;
+  --color-accent-muted: rgba(16, 185, 129, 0.15);
+  
+  --color-text-primary: #f0fdf4;
+  --color-text-secondary: #86efac;
+  --color-text-muted: #6b7b74;
+  
+  --color-border: #1f2e27;
+  --color-border-hover: #2d4038;
+  
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+  
+  /* Payment method colors */
+  --color-bank: #3b82f6;
+  --color-visa: #1a1f71;
+  --color-mastercard: #eb001b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 16px;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-hover);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+/* Monospace for numbers */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
