@@ -12,7 +12,8 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  Edit3
+  Edit3,
+  Globe
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
@@ -24,6 +25,19 @@ const features = [
   { icon: TrendingUp, title: 'Monitor Income', description: 'Track earnings from multiple sources' },
   { icon: PiggyBank, title: 'Set Budgets', description: 'Create monthly limits for each category' },
   { icon: BarChart3, title: 'View Insights', description: 'Visualize your finances with charts' },
+]
+
+const currencies = [
+  { code: 'CAD', symbol: '$', name: 'Canadian Dollar', flag: '🇨🇦' },
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷' },
+  { code: 'AUD', symbol: '$', name: 'Australian Dollar', flag: '🇦🇺' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳' },
+  { code: 'MXN', symbol: '$', name: 'Mexican Peso', flag: '🇲🇽' },
+  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc', flag: '🇨🇭' },
 ]
 
 // Generate a random color for custom categories
@@ -137,8 +151,70 @@ function WelcomeStep({ onNext, onImport, isImporting, importSuccess }) {
   )
 }
 
-// Step 2: Budget Setup
-function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplete }) {
+// Step 2: Currency Selection
+function CurrencyStep({ selectedCurrency, onSelectCurrency, onBack, onNext }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+    >
+      <div className="text-center mb-6">
+        <div className="w-14 h-14 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center mx-auto mb-3">
+          <Globe className="w-7 h-7 text-[var(--color-accent)]" />
+        </div>
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Choose Currency</h2>
+        <p className="text-[13px] text-[var(--color-text-muted)] mt-1">
+          Select the currency you use for tracking
+        </p>
+      </div>
+
+      {/* Currency Grid */}
+      <div className="card mb-4" style={{ padding: 0, maxHeight: '320px', overflowY: 'auto' }}>
+        {currencies.map((currency, i) => (
+          <button
+            key={currency.code}
+            onClick={() => onSelectCurrency(currency)}
+            className={`w-full flex items-center gap-4 p-4 text-left transition-colors ${
+              selectedCurrency?.code === currency.code 
+                ? 'bg-[var(--color-accent-muted)]' 
+                : 'hover:bg-[var(--color-bg-hover)]'
+            } ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}
+          >
+            <span className="text-2xl">{currency.flag}</span>
+            <div className="flex-1">
+              <p className="font-medium text-[var(--color-text-primary)]">{currency.name}</p>
+              <p className="text-[12px] text-[var(--color-text-muted)]">{currency.code}</p>
+            </div>
+            <span className="font-mono text-lg text-[var(--color-accent)]">{currency.symbol}</span>
+            {selectedCurrency?.code === currency.code && (
+              <Check className="w-5 h-5 text-[var(--color-accent)]" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex gap-3">
+        <button onClick={onBack} className="btn btn-secondary flex-1">
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+        <button 
+          onClick={onNext}
+          disabled={!selectedCurrency}
+          className="btn btn-primary flex-1 py-3"
+        >
+          Continue
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </motion.div>
+  )
+}
+
+// Step 3: Budget Setup
+function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, onBack, onComplete }) {
   const [isCustom, setIsCustom] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('')
   const [customCategoryName, setCustomCategoryName] = useState('')
@@ -225,7 +301,9 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
           )}
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm font-medium">
+                {currencySymbol}
+              </span>
               <input
                 type="number"
                 value={amount}
@@ -233,7 +311,8 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
                 placeholder="0.00"
                 step="0.01"
                 min="0"
-                className="input pl-7"
+                className="input"
+                style={{ paddingLeft: currencySymbol.length > 1 ? '2.5rem' : '2rem' }}
               />
             </div>
             <button
@@ -255,7 +334,7 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
               onClick={() => setAmount(val.toString())}
               className={`btn btn-ghost text-[12px] py-1 px-3 ${amount === val.toString() ? 'bg-[var(--color-bg-hover)]' : ''}`}
             >
-              ${val}
+              {currencySymbol}{val}
             </button>
           ))}
         </div>
@@ -274,18 +353,18 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
               const budgetData = budgets[catId]
               const name = typeof budgetData === 'object' ? budgetData.name : (expenseCategories.find(c => c.id === catId)?.name || catId)
               const color = typeof budgetData === 'object' ? budgetData.color : (expenseCategories.find(c => c.id === catId)?.color || '#6b7280')
-              const amount = typeof budgetData === 'object' ? budgetData.amount : budgetData
+              const budgetAmount = typeof budgetData === 'object' ? budgetData.amount : budgetData
               
               return (
                 <div key={catId} className={`flex items-center gap-3 p-3 ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
-                    <span className="text-[14px] font-bold" style={{ color }}>$</span>
+                    <span className="text-[14px] font-bold" style={{ color }}>{currencySymbol}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-[var(--color-text-primary)] truncate">{name}</p>
                   </div>
                   <span className="font-mono text-[14px] text-[var(--color-accent)]">
-                    ${amount.toFixed(2)}
+                    {currencySymbol}{budgetAmount.toFixed(2)}
                   </span>
                   <button
                     onClick={() => onRemoveBudget(catId)}
@@ -304,7 +383,7 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
       {usedCategoryIds.length > 0 && (
         <div className="flex items-center justify-between py-3 px-4 mb-4 rounded-xl bg-[var(--color-bg-muted)]">
           <span className="text-[var(--color-text-muted)]">Total Monthly Budget</span>
-          <span className="font-mono font-semibold text-lg text-[var(--color-accent)]">${totalBudget.toFixed(2)}</span>
+          <span className="font-mono font-semibold text-lg text-[var(--color-accent)]">{currencySymbol}{totalBudget.toFixed(2)}</span>
         </div>
       )}
 
@@ -331,10 +410,11 @@ function BudgetStep({ budgets, onUpdateBudget, onRemoveBudget, onBack, onComplet
 }
 
 export default function Onboarding() {
-  const { completeSetup, dispatch, setBudget } = useMoney()
+  const { completeSetup, dispatch, setBudget, updateSettings } = useMoney()
   const [step, setStep] = useState(1)
   const [isImporting, setIsImporting] = useState(false)
   const [importSuccess, setImportSuccess] = useState(false)
+  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]) // Default CAD
   const [budgets, setBudgets] = useState({})
 
   const handleImport = async (e) => {
@@ -374,6 +454,12 @@ export default function Onboarding() {
   }
 
   const handleComplete = () => {
+    // Save currency settings
+    updateSettings({ 
+      currency: selectedCurrency.code, 
+      currencySymbol: selectedCurrency.symbol 
+    })
+    
     // Save all budgets to context
     Object.entries(budgets).forEach(([categoryId, data]) => {
       setBudget(categoryId, data.amount)
@@ -391,6 +477,8 @@ export default function Onboarding() {
     completeSetup()
     toast.success('Welcome to MoneyTracker!')
   }
+
+  const totalSteps = 3
 
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)] flex items-center justify-center p-4">
@@ -420,8 +508,12 @@ export default function Onboarding() {
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className={`w-2 h-2 rounded-full transition-colors ${step >= 1 ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border)]'}`} />
-          <div className={`w-2 h-2 rounded-full transition-colors ${step >= 2 ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border)]'}`} />
+          {[1, 2, 3].map(s => (
+            <div 
+              key={s}
+              className={`w-2 h-2 rounded-full transition-colors ${step >= s ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border)]'}`} 
+            />
+          ))}
         </div>
 
         {/* Steps */}
@@ -436,12 +528,22 @@ export default function Onboarding() {
             />
           )}
           {step === 2 && (
+            <CurrencyStep
+              key="currency"
+              selectedCurrency={selectedCurrency}
+              onSelectCurrency={setSelectedCurrency}
+              onBack={() => setStep(1)}
+              onNext={() => setStep(3)}
+            />
+          )}
+          {step === 3 && (
             <BudgetStep
               key="budget"
               budgets={budgets}
+              currencySymbol={selectedCurrency.symbol}
               onUpdateBudget={handleUpdateBudget}
               onRemoveBudget={handleRemoveBudget}
-              onBack={() => setStep(1)}
+              onBack={() => setStep(2)}
               onComplete={handleComplete}
             />
           )}

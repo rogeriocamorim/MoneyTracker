@@ -115,3 +115,4 @@ export const getCombinedTrend = (expenses, income, months = 6) => {
   }))
 }
 
+
