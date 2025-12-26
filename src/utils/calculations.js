@@ -146,7 +146,10 @@ export const filterByDateRange = (items, dateRange) => {
 }
 
 // Get period label for display
-export const getPeriodLabel = (period) => {
+export const getPeriodLabel = (period, customRange = null) => {
+  if (period === 'custom' && customRange) {
+    return `${format(parseISO(customRange.start), 'MMM d')} - ${format(parseISO(customRange.end), 'MMM d, yyyy')}`
+  }
   const labels = {
     this_month: 'This Month',
     last_month: 'Last Month',
@@ -154,6 +157,7 @@ export const getPeriodLabel = (period) => {
     last_6_months: 'Last 6 Months',
     this_year: 'This Year',
     all_time: 'All Time',
+    custom: 'Custom Range',
   }
   return labels[period] || 'This Month'
 }

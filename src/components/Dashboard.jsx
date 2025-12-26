@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns'
 import { motion } from 'framer-motion'
 import { 
   TrendingUp, 
@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react'
 import {
   AreaChart,
@@ -46,6 +47,7 @@ const periods = [
   { id: 'last_6_months', label: 'Last 6 Months' },
   { id: 'this_year', label: 'This Year' },
   { id: 'all_time', label: 'All Time' },
+  { id: 'custom', label: 'Custom Range' },
 ]
 
 const container = {
@@ -98,9 +100,25 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
-function PeriodSelector({ value, onChange }) {
+function PeriodSelector({ value, onChange, customRange, onCustomRangeChange }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
+  const [tempStart, setTempStart] = useState(customRange?.start || format(startOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [tempEnd, setTempEnd] = useState(customRange?.end || format(new Date(), 'yyyy-MM-dd'))
+  
+  const isCustom = value === 'custom'
   const selectedPeriod = periods.find(p => p.id === value) || periods[0]
+  
+  const displayLabel = isCustom && customRange 
+    ? `${format(parseISO(customRange.start), 'MMM d')} - ${format(parseISO(customRange.end), 'MMM d, yyyy')}`
+    : selectedPeriod.label
+
+  const handleApplyCustom = () => {
+    onCustomRangeChange({ start: tempStart, end: tempEnd })
+    onChange('custom')
+    setShowCustomPicker(false)
+    setIsOpen(false)
+  }
 
   return (
     <div className="relative">
@@ -109,7 +127,7 @@ function PeriodSelector({ value, onChange }) {
         className="btn btn-secondary flex items-center gap-2"
       >
         <Calendar className="w-4 h-4" />
-        <span>{selectedPeriod.label}</span>
+        <span className="max-w-[180px] truncate">{displayLabel}</span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
@@ -117,25 +135,77 @@ function PeriodSelector({ value, onChange }) {
         <>
           <div 
             className="fixed inset-0 z-10" 
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false)
+              setShowCustomPicker(false)
+            }}
           />
-          <div className="absolute right-0 mt-2 w-48 card z-20" style={{ padding: '8px' }}>
-            {periods.map(period => (
-              <button
-                key={period.id}
-                onClick={() => {
-                  onChange(period.id)
-                  setIsOpen(false)
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-[14px] transition-colors ${
-                  value === period.id 
-                    ? 'bg-[var(--color-accent-muted)] text-[var(--color-accent)] font-medium' 
-                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
-                }`}
-              >
-                {period.label}
-              </button>
-            ))}
+          <div className="absolute right-0 mt-2 card z-20" style={{ padding: '8px', minWidth: showCustomPicker ? '280px' : '180px' }}>
+            {!showCustomPicker ? (
+              <>
+                {periods.map(period => (
+                  <button
+                    key={period.id}
+                    onClick={() => {
+                      if (period.id === 'custom') {
+                        setShowCustomPicker(true)
+                      } else {
+                        onChange(period.id)
+                        setIsOpen(false)
+                      }
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-[14px] transition-colors ${
+                      value === period.id 
+                        ? 'bg-[var(--color-accent-muted)] text-[var(--color-accent)] font-medium' 
+                        : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                    }`}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <div className="p-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-[14px] text-[var(--color-text-primary)]">Custom Range</h4>
+                  <button 
+                    onClick={() => setShowCustomPicker(false)}
+                    className="p-1 rounded hover:bg-[var(--color-bg-hover)]"
+                  >
+                    <X className="w-4 h-4 text-[var(--color-text-muted)]" />
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[12px] text-[var(--color-text-muted)] mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={tempStart}
+                      onChange={(e) => setTempStart(e.target.value)}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] text-[var(--color-text-muted)] mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={tempEnd}
+                      onChange={(e) => setTempEnd(e.target.value)}
+                      max={format(new Date(), 'yyyy-MM-dd')}
+                      className="input w-full"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleApplyCustom}
+                    className="btn btn-primary w-full"
+                    disabled={!tempStart || !tempEnd || tempStart > tempEnd}
+                  >
+                    Apply Range
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -146,9 +216,18 @@ function PeriodSelector({ value, onChange }) {
 export default function Dashboard() {
   const { state } = useMoney()
   const [selectedPeriod, setSelectedPeriod] = useState('this_month')
+  const [customRange, setCustomRange] = useState(null)
 
   // Get date range for selected period
-  const dateRange = useMemo(() => getDateRangeForPeriod(selectedPeriod), [selectedPeriod])
+  const dateRange = useMemo(() => {
+    if (selectedPeriod === 'custom' && customRange) {
+      return {
+        start: parseISO(customRange.start),
+        end: endOfMonth(parseISO(customRange.end)) // Include full end day
+      }
+    }
+    return getDateRangeForPeriod(selectedPeriod)
+  }, [selectedPeriod, customRange])
   
   // Filter data by selected period
   const filteredExpenses = useMemo(() => 
@@ -167,6 +246,12 @@ export default function Dashboard() {
   
   // Calculate budget usage - for periods other than "this month", show average monthly spending
   const monthsInPeriod = useMemo(() => {
+    if (selectedPeriod === 'custom' && customRange) {
+      const start = parseISO(customRange.start)
+      const end = parseISO(customRange.end)
+      const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+      return Math.max(1, Math.round(diffDays / 30))
+    }
     switch (selectedPeriod) {
       case 'this_month':
       case 'last_month':
@@ -199,6 +284,12 @@ export default function Dashboard() {
 
   // Trend chart shows data based on period
   const trendMonths = useMemo(() => {
+    if (selectedPeriod === 'custom' && customRange) {
+      const start = parseISO(customRange.start)
+      const end = parseISO(customRange.end)
+      const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+      return Math.min(12, Math.max(3, Math.round(diffDays / 30)))
+    }
     switch (selectedPeriod) {
       case 'this_month':
       case 'last_month':
@@ -214,7 +305,7 @@ export default function Dashboard() {
       default:
         return 6
     }
-  }, [selectedPeriod])
+  }, [selectedPeriod, customRange])
 
   const trendData = useMemo(() => getCombinedTrend(state.expenses, state.income, trendMonths), [state.expenses, state.income, trendMonths])
 
@@ -227,7 +318,7 @@ export default function Dashboard() {
       .map(item => ({ ...item, name: getCategoryById(item.category, state.customCategories)?.name || item.category }))
   }, [filteredExpenses, state.budgets, state.customCategories])
 
-  const periodLabel = getPeriodLabel(selectedPeriod)
+  const periodLabel = getPeriodLabel(selectedPeriod, customRange)
 
   return (
     <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
@@ -239,7 +330,12 @@ export default function Dashboard() {
             Overview for {periodLabel.toLowerCase()}
           </p>
         </div>
-        <PeriodSelector value={selectedPeriod} onChange={setSelectedPeriod} />
+        <PeriodSelector 
+          value={selectedPeriod} 
+          onChange={setSelectedPeriod} 
+          customRange={customRange}
+          onCustomRangeChange={setCustomRange}
+        />
       </motion.div>
 
       {/* Stats Grid */}
