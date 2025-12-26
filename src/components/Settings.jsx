@@ -123,19 +123,19 @@ export default function Settings() {
         
         {!showDeleteConfirm ? (
           <button onClick={() => setShowDeleteConfirm(true)} className="btn btn-danger w-full">
-            <Trash2 className="w-4 h-4" /> Clear All Data
+            <Trash2 className="w-4 h-4" /> Reset App & Clear All Data
           </button>
         ) : (
           <div className="space-y-3">
             <p className="text-[13px] text-[var(--color-text-muted)] text-center py-2">
-              Are you sure? This action cannot be undone.
+              This will delete all expenses, income, budgets and return to the setup screen.
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setShowDeleteConfirm(false)} className="btn btn-secondary">
                 Cancel
               </button>
               <button onClick={handleClearData} className="btn btn-danger">
-                <Check className="w-4 h-4" /> Confirm Delete
+                <Check className="w-4 h-4" /> Confirm Reset
               </button>
             </div>
           </div>
