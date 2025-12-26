@@ -6,16 +6,6 @@ import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { expenseCategories, paymentMethods } from '../data/categories'
 
-const backdrop = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 }
-}
-
-const modal = {
-  hidden: { opacity: 0, scale: 0.95, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", damping: 25, stiffness: 300 } }
-}
-
 export default function ExpenseForm({ expense = null, onClose }) {
   const { addExpense, updateExpense } = useMoney()
   const isEditing = !!expense
@@ -42,20 +32,14 @@ export default function ExpenseForm({ expense = null, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    const data = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-    }
-
+    const data = { ...formData, amount: parseFloat(formData.amount) }
     if (isEditing) {
       updateExpense({ ...data, id: expense.id })
-      toast.success('Expense updated!')
+      toast.success('Expense updated')
     } else {
       addExpense(data)
-      toast.success('Expense added!')
+      toast.success('Expense added')
     }
-
     onClose()
   }
 
@@ -69,45 +53,39 @@ export default function ExpenseForm({ expense = null, onClose }) {
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        variants={backdrop}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         onClick={onClose}
       >
         <motion.div 
-          className="glass-card rounded-2xl w-full max-w-md shadow-2xl"
-          variants={modal}
+          className="card w-full max-w-md"
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {isEditing ? 'Edit Expense' : 'New Expense'}
               </h2>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                {isEditing ? 'Update expense details' : 'Track your spending'}
+              <p className="text-[13px] text-[var(--color-text-muted)]">
+                {isEditing ? 'Update the details' : 'Track your spending'}
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors"
-            >
-              <X className="w-5 h-5 text-[var(--color-text-muted)]" />
+            <button onClick={onClose} className="btn btn-ghost p-2">
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            {/* Amount - Prominent */}
-            <div className="text-center py-4">
-              <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-                Amount
-              </label>
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-3xl text-[var(--color-text-muted)]">$</span>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Amount */}
+            <div className="text-center py-4 bg-[var(--color-bg-muted)] rounded-xl">
+              <label className="text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider">Amount</label>
+              <div className="flex items-center justify-center gap-1 mt-2">
+                <span className="text-2xl text-[var(--color-text-muted)]">$</span>
                 <input
                   type="number"
                   name="amount"
@@ -117,38 +95,26 @@ export default function ExpenseForm({ expense = null, onClose }) {
                   step="0.01"
                   min="0"
                   required
-                  className="text-4xl font-bold font-mono text-center bg-transparent border-none text-[var(--color-danger)] focus:outline-none w-40"
-                  style={{ caretColor: 'var(--color-accent)' }}
+                  className="text-3xl font-bold font-mono text-center bg-transparent border-none text-[var(--color-danger)] focus:outline-none w-32"
                 />
               </div>
             </div>
 
-            {/* Date & Category Row */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Date & Category */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors"
-                />
+                <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Date</label>
+                <input type="date" name="date" value={formData.date} onChange={handleChange} required className="input" />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-                  Category
-                </label>
+                <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Category</label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors"
-                  style={{ borderLeftColor: selectedCategory?.color, borderLeftWidth: '3px' }}
+                  className="input"
+                  style={{ borderLeft: `4px solid ${selectedCategory?.color}` }}
                 >
                   {expenseCategories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -159,9 +125,7 @@ export default function ExpenseForm({ expense = null, onClose }) {
 
             {/* Payment Method */}
             <div>
-              <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-                Payment Method
-              </label>
+              <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Payment</label>
               <div className="grid grid-cols-3 gap-2">
                 {paymentMethods.map(method => {
                   const isSelected = formData.paymentMethod === method.id
@@ -171,14 +135,10 @@ export default function ExpenseForm({ expense = null, onClose }) {
                       key={method.id}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, paymentMethod: method.id }))}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl text-xs font-medium transition-all ${
-                        isSelected
-                          ? 'bg-[var(--color-accent-muted)] text-[var(--color-accent)] border-[var(--color-accent)]'
-                          : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)]'
-                      } border`}
+                      className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'} flex-col gap-1 py-3`}
                     >
                       <Icon className="w-4 h-4" />
-                      <span>{method.name.split(' ')[0]}</span>
+                      <span className="text-[12px]">{method.name.split(' ')[0]}</span>
                     </button>
                   )
                 })}
@@ -187,24 +147,19 @@ export default function ExpenseForm({ expense = null, onClose }) {
 
             {/* Description */}
             <div>
-              <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-                Description
-              </label>
+              <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Description</label>
               <input
                 type="text"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="What was this for?"
-                className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-text-muted)]"
+                className="input"
               />
             </div>
 
             {/* Submit */}
-            <button
-              type="submit"
-              className="w-full mt-4 px-6 py-3 rounded-xl btn-primary flex items-center justify-center gap-2"
-            >
+            <button type="submit" className="btn btn-primary w-full py-3">
               {isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               {isEditing ? 'Update Expense' : 'Add Expense'}
             </button>

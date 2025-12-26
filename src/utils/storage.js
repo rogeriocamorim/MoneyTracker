@@ -79,3 +79,7 @@ export const importFromJson = (file) => {
   })
 }
 
+// Aliases for compatibility
+export const exportData = exportToJson
+export const importData = importFromJson
+

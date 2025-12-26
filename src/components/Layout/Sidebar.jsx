@@ -21,126 +21,93 @@ const navItems = [
 export default function Sidebar({ isOpen, onClose, width = 280 }) {
   return (
     <>
-      {/* Mobile overlay - only shown when sidebar is open on mobile */}
+      {/* Mobile overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={onClose}
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar - always visible on desktop (lg+), slide-in on mobile */}
+      {/* Sidebar */}
       <aside 
-        className="fixed left-0 top-0 h-full bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50"
+        className="fixed left-0 top-0 h-full bg-[var(--color-bg-subtle)] border-r border-[var(--color-border)] flex flex-col z-50"
         style={{ 
           width: `${width}px`,
           transform: `translateX(${isOpen ? '0' : '-100%'})`,
           transition: 'transform 0.3s ease'
         }}
       >
-        {/* Override transform for desktop - always show */}
         <style>{`
           @media (min-width: 1024px) {
             aside { transform: translateX(0) !important; }
           }
         `}</style>
 
-        {/* Header */}
-        <div className="p-5 lg:p-6 border-b border-[var(--color-border)] flex items-center justify-between">
-          <motion.div 
-            className="flex items-center gap-3"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+        {/* Logo */}
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center glow-accent"
-              style={{ background: 'var(--gradient-accent)' }}
+              className="w-10 h-10 rounded-xl bg-[var(--color-accent)] flex items-center justify-center"
             >
-              <TrendingUp className="w-6 h-6 text-[var(--color-bg-primary)]" />
+              <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg text-[var(--color-text-primary)]">MoneyTracker</h1>
-              <p className="text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider">Personal Finance</p>
+              <h1 className="font-semibold text-[15px] text-[var(--color-text-primary)]">MoneyTracker</h1>
+              <p className="text-[11px] text-[var(--color-text-muted)]">Personal Finance</p>
             </div>
-          </motion.div>
+          </div>
           
-          {/* Close button - mobile only */}
           <button 
             onClick={onClose}
-            className="lg:hidden p-3 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors"
+            className="lg:hidden p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors"
           >
-            <X className="w-6 h-6 text-[var(--color-text-muted)]" />
+            <X className="w-5 h-5 text-[var(--color-text-muted)]" />
           </button>
         </div>
 
+        {/* Divider */}
+        <div className="mx-4 h-px bg-[var(--color-border)]" />
+
         {/* Navigation */}
-        <nav className="flex-1 p-4 lg:p-5 overflow-y-auto">
-          <p className="px-4 mb-4 text-[11px] text-[var(--color-text-muted)] uppercase tracking-widest font-semibold">
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <p className="px-3 py-2 text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider font-medium">
             Menu
           </p>
-          <ul className="space-y-2">
-            {navItems.map(({ to, icon: Icon, label }, index) => (
-              <motion.li 
-                key={to}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
+          <ul className="space-y-1 mt-2">
+            {navItems.map(({ to, icon: Icon, label }) => (
+              <li key={to}>
                 <NavLink
                   to={to}
                   onClick={() => {
-                    // Only close on mobile
-                    if (window.innerWidth < 1024) {
-                      onClose()
-                    }
+                    if (window.innerWidth < 1024) onClose()
                   }}
                   className={({ isActive }) =>
-                    `group flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 relative ${
+                    `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 ${
                       isActive
-                        ? 'text-[var(--color-accent)]'
-                        : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                        ? 'bg-[var(--color-accent)] text-white'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
                     }`
                   }
                 >
-                  {({ isActive }) => (
-                    <>
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeNav"
-                          className="absolute inset-0 bg-[var(--color-accent-muted)] rounded-xl"
-                          initial={false}
-                          transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                        />
-                      )}
-                      <Icon className="w-7 h-7 relative z-10" strokeWidth={1.5} />
-                      <span className="font-semibold text-base relative z-10">{label}</span>
-                      {isActive && (
-                        <motion.div
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
-                          style={{ background: 'var(--gradient-accent)' }}
-                          layoutId="activeIndicator"
-                          transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                        />
-                      )}
-                    </>
-                  )}
+                  <Icon className="w-5 h-5" strokeWidth={2} />
+                  <span className="font-medium text-[14px]">{label}</span>
                 </NavLink>
-              </motion.li>
+              </li>
             ))}
           </ul>
         </nav>
 
         {/* Footer */}
-        <div className="p-4 lg:p-5 border-t border-[var(--color-border)]">
-          <div className="px-4 py-3 rounded-xl bg-[var(--color-bg-card)] border border-[var(--color-border)]">
-            <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Storage</p>
-            <p className="text-sm text-[var(--color-text-secondary)]">Data saved locally</p>
+        <div className="p-4 border-t border-[var(--color-border)]">
+          <div className="px-3 py-3 rounded-lg bg-[var(--color-bg-muted)]">
+            <p className="text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider">Storage</p>
+            <p className="text-[13px] text-[var(--color-text-secondary)] mt-1">Saved locally in browser</p>
           </div>
         </div>
       </aside>

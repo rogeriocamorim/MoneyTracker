@@ -12,26 +12,19 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
 
-  // Check if we're on desktop (lg breakpoint = 1024px)
   useEffect(() => {
-    const checkDesktop = () => {
-      setIsDesktop(window.innerWidth >= 1024)
-    }
-    
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024)
     checkDesktop()
     window.addEventListener('resize', checkDesktop)
     return () => window.removeEventListener('resize', checkDesktop)
   }, [])
 
-  // Close sidebar on route change (mobile only)
   useEffect(() => {
-    if (!isDesktop) {
-      setSidebarOpen(false)
-    }
+    if (!isDesktop) setSidebarOpen(false)
   }, [location.pathname, isDesktop])
 
   return (
-    <div className="min-h-screen min-h-dvh">
+    <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)]">
       <Toaster
         position="top-center"
         toastOptions={{
@@ -43,17 +36,18 @@ export default function Layout() {
             borderRadius: '12px',
             fontSize: '14px',
             padding: '12px 16px',
+            boxShadow: 'var(--shadow-lg)',
           },
           success: {
             iconTheme: {
               primary: 'var(--color-success)',
-              secondary: 'var(--color-bg-elevated)',
+              secondary: 'white',
             },
           },
           error: {
             iconTheme: {
               primary: 'var(--color-danger)',
-              secondary: 'var(--color-bg-elevated)',
+              secondary: 'white',
             },
           },
         }}
@@ -65,7 +59,7 @@ export default function Layout() {
         width={SIDEBAR_WIDTH}
       />
       
-      {/* Main content area - offset on desktop */}
+      {/* Main content */}
       <div 
         style={{ 
           marginLeft: isDesktop ? `${SIDEBAR_WIDTH}px` : 0,
@@ -74,22 +68,23 @@ export default function Layout() {
         }}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-4 sm:p-6 lg:p-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
         
-        {/* Bottom safe area for iOS */}
-        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+        {/* Page content with proper padding */}
+        <main className="p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
       </div>
     </div>
   )
