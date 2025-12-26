@@ -54,14 +54,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { state } = useMoney()
 
-  // Current month data
   const monthlyExpenses = getMonthlyExpenses(state.expenses)
   const monthlyIncome = getMonthlyIncome(state.income)
   const totalExpenses = getTotal(monthlyExpenses)
   const totalIncome = getTotal(monthlyIncome)
   const savings = totalIncome - totalExpenses
+  const totalBudget = Object.values(state.budgets).reduce((sum, b) => sum + b, 0)
+  const budgetPercentage = totalBudget > 0 ? Math.round((totalExpenses / totalBudget) * 100) : 0
   
-  // Category breakdown
   const categoryTotals = useMemo(() => {
     const totals = getTotalByCategory(monthlyExpenses)
     return expenseCategories
@@ -75,19 +75,21 @@ export default function Dashboard() {
       .sort((a, b) => b.value - a.value)
   }, [monthlyExpenses])
 
-  // Trend data (last 6 months)
   const trendData = useMemo(() => 
     getCombinedTrend(state.expenses, state.income, 6),
     [state.expenses, state.income]
   )
 
-  // Budget progress
-  const budgetProgress = useMemo(() => {
+  const budgetChartData = useMemo(() => {
     const progress = getBudgetProgress(monthlyExpenses, state.budgets)
     return progress
       .filter(b => b.budget > 0)
       .sort((a, b) => b.percentage - a.percentage)
       .slice(0, 5)
+      .map(item => ({
+        ...item,
+        name: getCategoryById(item.category)?.name || item.category,
+      }))
   }, [monthlyExpenses, state.budgets])
 
   const currentMonth = format(new Date(), 'MMMM yyyy')
@@ -95,74 +97,71 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Income Card */}
-        <div className="bg-[var(--color-bg-card)] rounded-2xl p-5 border border-[var(--color-border)]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-[var(--color-accent)]" />
+        <div className="bg-[var(--color-bg-card)] rounded-2xl p-4 lg:p-5 border border-[var(--color-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 lg:w-6 lg:h-6 text-[var(--color-accent)]" />
             </div>
-            <ArrowUpRight className="w-5 h-5 text-[var(--color-accent)]" />
+            <ArrowUpRight className="w-4 h-4 text-[var(--color-accent)]" />
           </div>
-          <p className="text-sm text-[var(--color-text-muted)] mb-1">Income</p>
-          <p className="text-2xl font-bold font-mono text-[var(--color-accent)]">
+          <p className="text-xs lg:text-sm text-[var(--color-text-muted)] mb-1">Income</p>
+          <p className="text-xl lg:text-2xl font-bold font-mono text-[var(--color-accent)]">
             {formatCurrency(totalIncome)}
           </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-2">{currentMonth}</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">{currentMonth}</p>
         </div>
 
         {/* Expenses Card */}
-        <div className="bg-[var(--color-bg-card)] rounded-2xl p-5 border border-[var(--color-border)]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-danger)]/10 flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-[var(--color-danger)]" />
+        <div className="bg-[var(--color-bg-card)] rounded-2xl p-4 lg:p-5 border border-[var(--color-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-[var(--color-danger)]/10 flex items-center justify-center">
+              <TrendingDown className="w-5 h-5 lg:w-6 lg:h-6 text-[var(--color-danger)]" />
             </div>
-            <ArrowDownRight className="w-5 h-5 text-[var(--color-danger)]" />
+            <ArrowDownRight className="w-4 h-4 text-[var(--color-danger)]" />
           </div>
-          <p className="text-sm text-[var(--color-text-muted)] mb-1">Expenses</p>
-          <p className="text-2xl font-bold font-mono text-[var(--color-danger)]">
+          <p className="text-xs lg:text-sm text-[var(--color-text-muted)] mb-1">Expenses</p>
+          <p className="text-xl lg:text-2xl font-bold font-mono text-[var(--color-danger)]">
             {formatCurrency(totalExpenses)}
           </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-2">{currentMonth}</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">{currentMonth}</p>
         </div>
 
         {/* Savings Card */}
-        <div className="bg-[var(--color-bg-card)] rounded-2xl p-5 border border-[var(--color-border)]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-info)]/10 flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-[var(--color-info)]" />
+        <div className="bg-[var(--color-bg-card)] rounded-2xl p-4 lg:p-5 border border-[var(--color-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-[var(--color-info)]/10 flex items-center justify-center">
+              <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-[var(--color-info)]" />
             </div>
             {savings >= 0 ? (
-              <ArrowUpRight className="w-5 h-5 text-[var(--color-accent)]" />
+              <ArrowUpRight className="w-4 h-4 text-[var(--color-accent)]" />
             ) : (
-              <ArrowDownRight className="w-5 h-5 text-[var(--color-danger)]" />
+              <ArrowDownRight className="w-4 h-4 text-[var(--color-danger)]" />
             )}
           </div>
-          <p className="text-sm text-[var(--color-text-muted)] mb-1">Savings</p>
-          <p className={`text-2xl font-bold font-mono ${savings >= 0 ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'}`}>
+          <p className="text-xs lg:text-sm text-[var(--color-text-muted)] mb-1">Savings</p>
+          <p className={`text-xl lg:text-2xl font-bold font-mono ${savings >= 0 ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'}`}>
             {formatCurrency(Math.abs(savings))}
           </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-2">
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
             {savings >= 0 ? 'Saved this month' : 'Overspent'}
           </p>
         </div>
 
         {/* Budget Card */}
-        <div className="bg-[var(--color-bg-card)] rounded-2xl p-5 border border-[var(--color-border)]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-warning)]/10 flex items-center justify-center">
-              <PiggyBank className="w-6 h-6 text-[var(--color-warning)]" />
+        <div className="bg-[var(--color-bg-card)] rounded-2xl p-4 lg:p-5 border border-[var(--color-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-[var(--color-warning)]/10 flex items-center justify-center">
+              <PiggyBank className="w-5 h-5 lg:w-6 lg:h-6 text-[var(--color-warning)]" />
             </div>
           </div>
-          <p className="text-sm text-[var(--color-text-muted)] mb-1">Budget Used</p>
-          <p className="text-2xl font-bold font-mono text-[var(--color-text-primary)]">
-            {Object.values(state.budgets).reduce((sum, b) => sum + b, 0) > 0
-              ? `${Math.round((totalExpenses / Object.values(state.budgets).reduce((sum, b) => sum + b, 0)) * 100)}%`
-              : '0%'
-            }
+          <p className="text-xs lg:text-sm text-[var(--color-text-muted)] mb-1">Budget Used</p>
+          <p className="text-xl lg:text-2xl font-bold font-mono text-[var(--color-text-primary)]">
+            {budgetPercentage}%
           </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-2">
-            of {formatCurrency(Object.values(state.budgets).reduce((sum, b) => sum + b, 0))}
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            of {formatCurrency(totalBudget)}
           </p>
         </div>
       </div>
@@ -172,11 +171,11 @@ export default function Dashboard() {
         {/* Income vs Expenses Trend */}
         <div className="bg-[var(--color-bg-card)] rounded-2xl p-6 border border-[var(--color-border)]">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-            Income vs Expenses (6 Months)
+            Income vs Expenses
           </h3>
-          <div style={{ width: '100%', height: 256 }}>
-            <ResponsiveContainer>
-              <LineChart data={trendData}>
+          <div style={{ width: '100%', height: 280 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis 
                   dataKey="shortMonth" 
@@ -194,17 +193,17 @@ export default function Dashboard() {
                   type="monotone" 
                   dataKey="income" 
                   name="Income"
-                  stroke="var(--color-accent)" 
+                  stroke="#10b981" 
                   strokeWidth={2}
-                  dot={{ fill: 'var(--color-accent)', strokeWidth: 0 }}
+                  dot={{ fill: '#10b981', strokeWidth: 0, r: 4 }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="expenses" 
                   name="Expenses"
-                  stroke="var(--color-danger)" 
+                  stroke="#ef4444" 
                   strokeWidth={2}
-                  dot={{ fill: 'var(--color-danger)', strokeWidth: 0 }}
+                  dot={{ fill: '#ef4444', strokeWidth: 0, r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -217,12 +216,12 @@ export default function Dashboard() {
             Expenses by Category
           </h3>
           {categoryTotals.length === 0 ? (
-            <div style={{ height: 256 }} className="flex items-center justify-center">
+            <div style={{ height: 280 }} className="flex items-center justify-center">
               <p className="text-[var(--color-text-muted)]">No expenses this month</p>
             </div>
           ) : (
-            <div style={{ height: 256 }} className="flex">
-              <div className="flex-1" style={{ minWidth: 0 }}>
+            <div style={{ height: 280 }} className="flex">
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -232,7 +231,7 @@ export default function Dashboard() {
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
-                      outerRadius={80}
+                      outerRadius={90}
                       paddingAngle={2}
                     >
                       {categoryTotals.map((entry, index) => (
@@ -243,7 +242,7 @@ export default function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-40 flex flex-col justify-center gap-2">
+              <div className="w-36 flex flex-col justify-center gap-2 pl-2">
                 {categoryTotals.slice(0, 5).map(cat => (
                   <div key={cat.id} className="flex items-center gap-2">
                     <div 
@@ -269,16 +268,20 @@ export default function Dashboard() {
       {/* Budget Progress */}
       <div className="bg-[var(--color-bg-card)] rounded-2xl p-6 border border-[var(--color-border)]">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-          Budget vs Actual ({currentMonth})
+          Budget vs Actual
         </h3>
-        {budgetProgress.length === 0 ? (
+        {budgetChartData.length === 0 ? (
           <p className="text-[var(--color-text-muted)] text-center py-8">
             Set up budgets in the Budget page to see your progress here
           </p>
         ) : (
-          <div style={{ width: '100%', height: 256 }}>
-            <ResponsiveContainer>
-              <BarChart data={budgetProgress} layout="vertical">
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={budgetChartData} 
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis 
                   type="number"
@@ -288,24 +291,23 @@ export default function Dashboard() {
                 />
                 <YAxis 
                   type="category"
-                  dataKey="category"
+                  dataKey="name"
                   stroke="var(--color-text-muted)"
                   tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
-                  tickFormatter={(value) => getCategoryById(value)?.name.slice(0, 12) || value}
-                  width={100}
+                  width={90}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Bar 
                   dataKey="budget" 
                   name="Budget"
-                  fill="var(--color-border-hover)" 
+                  fill="#2d4038" 
                   radius={[0, 4, 4, 0]}
                 />
                 <Bar 
                   dataKey="spent" 
                   name="Spent"
-                  fill="var(--color-accent)" 
+                  fill="#10b981" 
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>
@@ -338,18 +340,18 @@ export default function Dashboard() {
                       style={{ 
                         backgroundColor: isIncome 
                           ? 'rgba(16, 185, 129, 0.1)' 
-                          : `${category?.color}20`
+                          : `${category?.color || '#666'}20`
                       }}
                     >
                       {isIncome ? (
                         <TrendingUp className="w-4 h-4 text-[var(--color-accent)]" />
                       ) : (
-                        <TrendingDown className="w-4 h-4" style={{ color: category?.color }} />
+                        <TrendingDown className="w-4 h-4" style={{ color: category?.color || '#666' }} />
                       )}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        {isIncome ? item.notes || 'Income' : item.description || category?.name}
+                        {isIncome ? item.notes || 'Income' : item.description || category?.name || 'Expense'}
                       </p>
                       <p className="text-xs text-[var(--color-text-muted)]">
                         {format(new Date(item.date), 'MMM d')}
@@ -372,4 +374,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
