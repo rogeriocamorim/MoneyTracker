@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard'
 import ExpenseList from './components/ExpenseList'
 import IncomeList from './components/IncomeList'
 import BudgetManager from './components/BudgetManager'
+import Compare from './components/Compare'
 import Settings from './components/Settings'
 import Onboarding from './components/Onboarding'
 
@@ -38,6 +39,7 @@ function AppContent() {
           <Route path="expenses" element={<ExpenseList />} />
           <Route path="income" element={<IncomeList />} />
           <Route path="budget" element={<BudgetManager />} />
+          <Route path="compare" element={<Compare />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

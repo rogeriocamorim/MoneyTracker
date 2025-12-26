@@ -7,7 +7,8 @@ import {
   PiggyBank, 
   Settings,
   TrendingUp,
-  X
+  X,
+  GitCompare
 } from 'lucide-react'
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/expenses', icon: Receipt, label: 'Expenses' },
   { to: '/income', icon: Wallet, label: 'Income' },
   { to: '/budget', icon: PiggyBank, label: 'Budget' },
+  { to: '/compare', icon: GitCompare, label: 'Compare' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
