@@ -6,7 +6,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)]">
       <Sidebar />
-      <div className="ml-64">
+      <div style={{ marginLeft: '256px' }}>
         <Header />
         <main className="p-8">
           <Outlet />
@@ -15,4 +15,3 @@ export default function Layout() {
     </div>
   )
 }
-

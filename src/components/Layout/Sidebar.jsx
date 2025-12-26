@@ -18,7 +18,10 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50">
+    <aside 
+      className="fixed left-0 top-0 h-screen bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] flex flex-col z-50"
+      style={{ width: '256px' }}
+    >
       {/* Logo */}
       <div className="p-6 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
