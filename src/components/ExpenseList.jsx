@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, Tag } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Tag, CreditCard, Landmark } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
-import { getCategoryById, getPaymentMethodById, getAllCategories } from '../data/categories'
+import { getCategoryById, getPaymentMethodById, getAllCategories, paymentMethods } from '../data/categories'
 import { formatCurrency, getMonthlyExpenses, getTotal } from '../utils/calculations'
 import ExpenseForm from './ExpenseForm'
 import * as LucideIcons from 'lucide-react'
@@ -16,12 +16,32 @@ function CategoryIcon({ categoryId, customCategories }) {
   return Icon ? <Icon className="w-5 h-5" style={{ color: category.color }} /> : null
 }
 
+function PaymentBadge({ methodId }) {
+  const method = getPaymentMethodById(methodId)
+  if (!method) return null
+  
+  const Icon = methodId === 'bank' ? Landmark : CreditCard
+  const bgColor = methodId === 'bank' ? '#3b82f620' : methodId === 'visa' ? '#1a1f7120' : '#eb001b20'
+  const textColor = methodId === 'bank' ? '#3b82f6' : methodId === 'visa' ? '#1a1f71' : '#eb001b'
+  
+  return (
+    <span 
+      className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full"
+      style={{ backgroundColor: bgColor, color: textColor }}
+    >
+      <Icon className="w-3 h-3" />
+      {method.name.split(' ')[0]}
+    </span>
+  )
+}
+
 export default function ExpenseList() {
   const { state, deleteExpense } = useMoney()
   const [showForm, setShowForm] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
+  const [filterPayment, setFilterPayment] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'))
 
   const allCategories = getAllCategories(state.customCategories)
@@ -37,8 +57,9 @@ export default function ExpenseList() {
       )
     }
     if (filterCategory) expenses = expenses.filter(e => e.category === filterCategory)
+    if (filterPayment) expenses = expenses.filter(e => e.paymentMethod === filterPayment)
     return expenses.sort((a, b) => new Date(b.date) - new Date(a.date))
-  }, [state.expenses, state.customCategories, searchTerm, filterCategory, selectedMonth])
+  }, [state.expenses, state.customCategories, searchTerm, filterCategory, filterPayment, selectedMonth])
 
   const totalExpenses = getTotal(filteredExpenses)
 
@@ -70,6 +91,10 @@ export default function ExpenseList() {
           <option value="">All Categories</option>
           {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
         </select>
+        <select value={filterPayment} onChange={(e) => setFilterPayment(e.target.value)} className="input" style={{ width: 'auto' }}>
+          <option value="">All Payments</option>
+          {paymentMethods.map(method => <option key={method.id} value={method.id}>{method.name}</option>)}
+        </select>
       </div>
 
       {/* List */}
@@ -82,7 +107,6 @@ export default function ExpenseList() {
           <div>
             {filteredExpenses.map((expense, i) => {
               const category = getCategoryById(expense.category, state.customCategories)
-              const paymentMethod = getPaymentMethodById(expense.paymentMethod)
               return (
                 <div key={expense.id} className={`flex items-center gap-4 p-4 hover:bg-[var(--color-bg-hover)] transition-colors group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#6b7280'}15` }}>
@@ -90,9 +114,10 @@ export default function ExpenseList() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[var(--color-text-primary)] truncate">{expense.description || category?.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[12px] text-[var(--color-text-muted)]">{format(parseISO(expense.date), 'MMM d')}</span>
-                      <span className="text-[12px] px-2 py-0.5 rounded bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">{paymentMethod?.name.split(' ')[0]}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[12px] text-[var(--color-text-muted)]">{format(parseISO(expense.date), 'MMM d, yyyy')}</span>
+                      <span className="text-[var(--color-text-muted)]">•</span>
+                      <PaymentBadge methodId={expense.paymentMethod} />
                     </div>
                   </div>
                   <p className="font-mono font-semibold text-[var(--color-danger)]">-{formatCurrency(expense.amount)}</p>
