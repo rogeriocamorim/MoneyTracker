@@ -29,58 +29,192 @@ const features = [
   { icon: BarChart3, title: 'View Insights', description: 'Visualize your finances with charts' },
 ]
 
-// Generate mock data for demo
+// Generate mock data for demo - full year of realistic data
 const generateMockData = () => {
   const today = new Date()
-  
-  // Mock expenses over the last 3 months
-  const mockExpenses = [
-    // This month
-    { id: 'e1', date: format(subDays(today, 1), 'yyyy-MM-dd'), amount: 85.50, category: 'food', description: 'Grocery shopping', paymentMethod: 'visa' },
-    { id: 'e2', date: format(subDays(today, 2), 'yyyy-MM-dd'), amount: 45.00, category: 'transport', description: 'Gas station', paymentMethod: 'bank' },
-    { id: 'e3', date: format(subDays(today, 3), 'yyyy-MM-dd'), amount: 12.99, category: 'subscriptions', description: 'Netflix', paymentMethod: 'visa' },
-    { id: 'e4', date: format(subDays(today, 5), 'yyyy-MM-dd'), amount: 65.00, category: 'dining', description: 'Dinner with friends', paymentMethod: 'mastercard' },
-    { id: 'e5', date: format(subDays(today, 7), 'yyyy-MM-dd'), amount: 150.00, category: 'utilities', description: 'Electricity bill', paymentMethod: 'bank' },
-    { id: 'e6', date: format(subDays(today, 10), 'yyyy-MM-dd'), amount: 35.00, category: 'entertainment', description: 'Movie tickets', paymentMethod: 'visa' },
-    { id: 'e7', date: format(subDays(today, 12), 'yyyy-MM-dd'), amount: 200.00, category: 'shopping', description: 'New shoes', paymentMethod: 'mastercard' },
-    { id: 'e8', date: format(subDays(today, 15), 'yyyy-MM-dd'), amount: 95.00, category: 'food', description: 'Weekly groceries', paymentMethod: 'bank' },
-    { id: 'e9', date: format(subDays(today, 18), 'yyyy-MM-dd'), amount: 1500.00, category: 'housing', description: 'Rent payment', paymentMethod: 'bank' },
-    { id: 'e10', date: format(subDays(today, 20), 'yyyy-MM-dd'), amount: 55.00, category: 'health', description: 'Pharmacy', paymentMethod: 'visa' },
-    // Last month
-    { id: 'e11', date: format(subMonths(today, 1), 'yyyy-MM-dd'), amount: 120.00, category: 'food', description: 'Costco run', paymentMethod: 'visa' },
-    { id: 'e12', date: format(subDays(subMonths(today, 1), 5), 'yyyy-MM-dd'), amount: 80.00, category: 'transport', description: 'Uber rides', paymentMethod: 'mastercard' },
-    { id: 'e13', date: format(subDays(subMonths(today, 1), 10), 'yyyy-MM-dd'), amount: 1500.00, category: 'housing', description: 'Rent payment', paymentMethod: 'bank' },
-    { id: 'e14', date: format(subDays(subMonths(today, 1), 15), 'yyyy-MM-dd'), amount: 200.00, category: 'insurance', description: 'Car insurance', paymentMethod: 'bank' },
-    { id: 'e15', date: format(subDays(subMonths(today, 1), 20), 'yyyy-MM-dd'), amount: 45.00, category: 'dining', description: 'Lunch meetings', paymentMethod: 'visa' },
-    // Two months ago
-    { id: 'e16', date: format(subMonths(today, 2), 'yyyy-MM-dd'), amount: 110.00, category: 'food', description: 'Groceries', paymentMethod: 'bank' },
-    { id: 'e17', date: format(subDays(subMonths(today, 2), 8), 'yyyy-MM-dd'), amount: 1500.00, category: 'housing', description: 'Rent payment', paymentMethod: 'bank' },
-    { id: 'e18', date: format(subDays(subMonths(today, 2), 12), 'yyyy-MM-dd'), amount: 300.00, category: 'travel', description: 'Weekend trip', paymentMethod: 'mastercard' },
+  const mockExpenses = []
+  const mockIncome = []
+  let expenseId = 1
+  let incomeId = 1
+
+  // Expense templates with realistic variations
+  const expenseTemplates = [
+    // Recurring monthly
+    { category: 'housing', description: 'Rent payment', baseAmount: 1500, variation: 0, paymentMethod: 'bank', dayOfMonth: 1 },
+    { category: 'utilities', description: 'Electricity bill', baseAmount: 120, variation: 40, paymentMethod: 'bank', dayOfMonth: 5 },
+    { category: 'utilities', description: 'Internet bill', baseAmount: 75, variation: 0, paymentMethod: 'bank', dayOfMonth: 8 },
+    { category: 'subscriptions', description: 'Netflix', baseAmount: 15.99, variation: 0, paymentMethod: 'visa', dayOfMonth: 10 },
+    { category: 'subscriptions', description: 'Spotify', baseAmount: 11.99, variation: 0, paymentMethod: 'visa', dayOfMonth: 12 },
+    { category: 'insurance', description: 'Car insurance', baseAmount: 180, variation: 0, paymentMethod: 'bank', dayOfMonth: 15 },
+    // Weekly groceries (4x per month)
+    { category: 'food', description: 'Grocery shopping', baseAmount: 95, variation: 35, paymentMethod: 'visa', weekly: true },
+    { category: 'food', description: 'Costco run', baseAmount: 150, variation: 50, paymentMethod: 'mastercard', dayOfMonth: 20 },
+    // Variable expenses
+    { category: 'transport', description: 'Gas station', baseAmount: 55, variation: 15, paymentMethod: 'bank', timesPerMonth: 3 },
+    { category: 'dining', description: 'Restaurant dinner', baseAmount: 65, variation: 25, paymentMethod: 'mastercard', timesPerMonth: 2 },
+    { category: 'dining', description: 'Coffee shop', baseAmount: 18, variation: 8, paymentMethod: 'visa', timesPerMonth: 4 },
+    { category: 'entertainment', description: 'Movie tickets', baseAmount: 35, variation: 10, paymentMethod: 'visa', timesPerMonth: 1 },
+    { category: 'health', description: 'Pharmacy', baseAmount: 45, variation: 20, paymentMethod: 'visa', timesPerMonth: 1 },
+    { category: 'personal', description: 'Haircut', baseAmount: 35, variation: 0, paymentMethod: 'bank', monthlyChance: 0.5 },
+    { category: 'shopping', description: 'Amazon order', baseAmount: 65, variation: 45, paymentMethod: 'visa', timesPerMonth: 2 },
   ]
 
-  // Mock income over the last 3 months
-  const mockIncome = [
-    { id: 'i1', date: format(subDays(today, 1), 'yyyy-MM-dd'), amount: 4500.00, source: 'daily_job', notes: 'Salary deposit' },
-    { id: 'i2', date: format(subDays(today, 15), 'yyyy-MM-dd'), amount: 500.00, source: 'freelance', notes: 'Side project' },
-    { id: 'i3', date: format(subMonths(today, 1), 'yyyy-MM-dd'), amount: 4500.00, source: 'daily_job', notes: 'Salary deposit' },
-    { id: 'i4', date: format(subDays(subMonths(today, 1), 10), 'yyyy-MM-dd'), amount: 200.00, source: 'investments', notes: 'Dividend payment' },
-    { id: 'i5', date: format(subMonths(today, 2), 'yyyy-MM-dd'), amount: 4500.00, source: 'daily_job', notes: 'Salary deposit' },
-    { id: 'i6', date: format(subDays(subMonths(today, 2), 20), 'yyyy-MM-dd'), amount: 800.00, source: 'business', notes: 'Client payment' },
+  // Special one-time expenses per month
+  const specialExpenses = [
+    { month: 11, category: 'gifts', description: 'Christmas gifts', amount: 450, paymentMethod: 'mastercard' },
+    { month: 10, category: 'entertainment', description: 'Halloween party supplies', amount: 85, paymentMethod: 'visa' },
+    { month: 6, category: 'travel', description: 'Summer vacation', amount: 1200, paymentMethod: 'mastercard' },
+    { month: 7, category: 'travel', description: 'Weekend camping trip', amount: 280, paymentMethod: 'visa' },
+    { month: 3, category: 'shopping', description: 'Spring wardrobe update', amount: 320, paymentMethod: 'mastercard' },
+    { month: 8, category: 'education', description: 'Online course', amount: 199, paymentMethod: 'visa' },
+    { month: 4, category: 'health', description: 'Dental cleaning', amount: 150, paymentMethod: 'bank' },
+    { month: 9, category: 'health', description: 'Annual checkup', amount: 75, paymentMethod: 'bank' },
+    { month: 1, category: 'entertainment', description: 'Concert tickets', amount: 180, paymentMethod: 'mastercard' },
+    { month: 5, category: 'gifts', description: "Mother's Day gift", amount: 95, paymentMethod: 'visa' },
   ]
+
+  // Generate expenses for each month (last 12 months)
+  for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+    const monthDate = subMonths(today, monthOffset)
+    const currentMonth = monthDate.getMonth()
+    
+    expenseTemplates.forEach(template => {
+      if (template.weekly) {
+        // Weekly expenses (4 times per month)
+        for (let week = 0; week < 4; week++) {
+          const day = 3 + (week * 7)
+          const amount = template.baseAmount + (Math.random() * template.variation * 2 - template.variation)
+          mockExpenses.push({
+            id: `e${expenseId++}`,
+            date: format(subDays(subMonths(today, monthOffset), day), 'yyyy-MM-dd'),
+            amount: Math.round(amount * 100) / 100,
+            category: template.category,
+            description: template.description,
+            paymentMethod: template.paymentMethod,
+          })
+        }
+      } else if (template.timesPerMonth) {
+        // Multiple times per month
+        for (let i = 0; i < template.timesPerMonth; i++) {
+          const day = Math.floor(Math.random() * 25) + 1
+          const amount = template.baseAmount + (Math.random() * template.variation * 2 - template.variation)
+          mockExpenses.push({
+            id: `e${expenseId++}`,
+            date: format(subDays(subMonths(today, monthOffset), day), 'yyyy-MM-dd'),
+            amount: Math.round(amount * 100) / 100,
+            category: template.category,
+            description: template.description,
+            paymentMethod: template.paymentMethod,
+          })
+        }
+      } else if (template.monthlyChance) {
+        // Random occurrence
+        if (Math.random() < template.monthlyChance) {
+          const day = Math.floor(Math.random() * 25) + 1
+          mockExpenses.push({
+            id: `e${expenseId++}`,
+            date: format(subDays(subMonths(today, monthOffset), day), 'yyyy-MM-dd'),
+            amount: template.baseAmount,
+            category: template.category,
+            description: template.description,
+            paymentMethod: template.paymentMethod,
+          })
+        }
+      } else if (template.dayOfMonth) {
+        // Fixed day of month
+        const amount = template.baseAmount + (Math.random() * template.variation * 2 - template.variation)
+        mockExpenses.push({
+          id: `e${expenseId++}`,
+          date: format(subDays(subMonths(today, monthOffset), template.dayOfMonth), 'yyyy-MM-dd'),
+          amount: Math.round(amount * 100) / 100,
+          category: template.category,
+          description: template.description,
+          paymentMethod: template.paymentMethod,
+        })
+      }
+    })
+
+    // Add special expenses for specific months
+    specialExpenses.forEach(special => {
+      if (currentMonth === special.month) {
+        mockExpenses.push({
+          id: `e${expenseId++}`,
+          date: format(subDays(subMonths(today, monthOffset), 15), 'yyyy-MM-dd'),
+          amount: special.amount,
+          category: special.category,
+          description: special.description,
+          paymentMethod: special.paymentMethod,
+        })
+      }
+    })
+  }
+
+  // Generate income for each month (last 12 months)
+  for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
+    // Main salary (twice a month)
+    mockIncome.push({
+      id: `i${incomeId++}`,
+      date: format(subDays(subMonths(today, monthOffset), 1), 'yyyy-MM-dd'),
+      amount: 2250.00,
+      source: 'daily_job',
+      notes: 'Salary - first half',
+    })
+    mockIncome.push({
+      id: `i${incomeId++}`,
+      date: format(subDays(subMonths(today, monthOffset), 15), 'yyyy-MM-dd'),
+      amount: 2250.00,
+      source: 'daily_job',
+      notes: 'Salary - second half',
+    })
+
+    // Occasional freelance (every 2-3 months)
+    if (monthOffset % 2 === 0) {
+      mockIncome.push({
+        id: `i${incomeId++}`,
+        date: format(subDays(subMonths(today, monthOffset), 20), 'yyyy-MM-dd'),
+        amount: 400 + Math.floor(Math.random() * 400),
+        source: 'freelance',
+        notes: 'Side project work',
+      })
+    }
+
+    // Quarterly dividends
+    if (monthOffset % 3 === 0) {
+      mockIncome.push({
+        id: `i${incomeId++}`,
+        date: format(subDays(subMonths(today, monthOffset), 25), 'yyyy-MM-dd'),
+        amount: 150 + Math.floor(Math.random() * 100),
+        source: 'investments',
+        notes: 'Quarterly dividend',
+      })
+    }
+
+    // Wife's business income (monthly, variable)
+    mockIncome.push({
+      id: `i${incomeId++}`,
+      date: format(subDays(subMonths(today, monthOffset), 10), 'yyyy-MM-dd'),
+      amount: 800 + Math.floor(Math.random() * 600),
+      source: 'wife_business',
+      notes: 'Business revenue',
+    })
+  }
 
   // Mock budgets
   const mockBudgets = {
-    food: 600,
+    food: 650,
     transport: 200,
-    utilities: 200,
+    utilities: 220,
     entertainment: 150,
-    shopping: 300,
-    health: 100,
+    shopping: 250,
+    health: 150,
     dining: 200,
-    subscriptions: 50,
-    housing: 1600,
-    insurance: 250,
+    subscriptions: 60,
+    housing: 1550,
+    insurance: 200,
     travel: 300,
+    gifts: 100,
+    personal: 80,
+    education: 100,
   }
 
   return {
