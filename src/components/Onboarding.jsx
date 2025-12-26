@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { format, subDays, subMonths } from 'date-fns'
 import { 
   TrendingUp, 
   Upload, 
@@ -13,7 +14,8 @@ import {
   Plus,
   Trash2,
   Edit3,
-  Globe
+  Globe,
+  Play
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
@@ -26,6 +28,73 @@ const features = [
   { icon: PiggyBank, title: 'Set Budgets', description: 'Create monthly limits for each category' },
   { icon: BarChart3, title: 'View Insights', description: 'Visualize your finances with charts' },
 ]
+
+// Generate mock data for demo
+const generateMockData = () => {
+  const today = new Date()
+  
+  // Mock expenses over the last 3 months
+  const mockExpenses = [
+    // This month
+    { id: 'e1', date: format(subDays(today, 1), 'yyyy-MM-dd'), amount: 85.50, category: 'food', description: 'Grocery shopping', paymentMethod: 'visa' },
+    { id: 'e2', date: format(subDays(today, 2), 'yyyy-MM-dd'), amount: 45.00, category: 'transport', description: 'Gas station', paymentMethod: 'bank' },
+    { id: 'e3', date: format(subDays(today, 3), 'yyyy-MM-dd'), amount: 12.99, category: 'subscriptions', description: 'Netflix', paymentMethod: 'visa' },
+    { id: 'e4', date: format(subDays(today, 5), 'yyyy-MM-dd'), amount: 65.00, category: 'dining', description: 'Dinner with friends', paymentMethod: 'mastercard' },
+    { id: 'e5', date: format(subDays(today, 7), 'yyyy-MM-dd'), amount: 150.00, category: 'utilities', description: 'Electricity bill', paymentMethod: 'bank' },
+    { id: 'e6', date: format(subDays(today, 10), 'yyyy-MM-dd'), amount: 35.00, category: 'entertainment', description: 'Movie tickets', paymentMethod: 'visa' },
+    { id: 'e7', date: format(subDays(today, 12), 'yyyy-MM-dd'), amount: 200.00, category: 'shopping', description: 'New shoes', paymentMethod: 'mastercard' },
+    { id: 'e8', date: format(subDays(today, 15), 'yyyy-MM-dd'), amount: 95.00, category: 'food', description: 'Weekly groceries', paymentMethod: 'bank' },
+    { id: 'e9', date: format(subDays(today, 18), 'yyyy-MM-dd'), amount: 1500.00, category: 'housing', description: 'Rent payment', paymentMethod: 'bank' },
+    { id: 'e10', date: format(subDays(today, 20), 'yyyy-MM-dd'), amount: 55.00, category: 'health', description: 'Pharmacy', paymentMethod: 'visa' },
+    // Last month
+    { id: 'e11', date: format(subMonths(today, 1), 'yyyy-MM-dd'), amount: 120.00, category: 'food', description: 'Costco run', paymentMethod: 'visa' },
+    { id: 'e12', date: format(subDays(subMonths(today, 1), 5), 'yyyy-MM-dd'), amount: 80.00, category: 'transport', description: 'Uber rides', paymentMethod: 'mastercard' },
+    { id: 'e13', date: format(subDays(subMonths(today, 1), 10), 'yyyy-MM-dd'), amount: 1500.00, category: 'housing', description: 'Rent payment', paymentMethod: 'bank' },
+    { id: 'e14', date: format(subDays(subMonths(today, 1), 15), 'yyyy-MM-dd'), amount: 200.00, category: 'insurance', description: 'Car insurance', paymentMethod: 'bank' },
+    { id: 'e15', date: format(subDays(subMonths(today, 1), 20), 'yyyy-MM-dd'), amount: 45.00, category: 'dining', description: 'Lunch meetings', paymentMethod: 'visa' },
+    // Two months ago
+    { id: 'e16', date: format(subMonths(today, 2), 'yyyy-MM-dd'), amount: 110.00, category: 'food', description: 'Groceries', paymentMethod: 'bank' },
+    { id: 'e17', date: format(subDays(subMonths(today, 2), 8), 'yyyy-MM-dd'), amount: 1500.00, category: 'housing', description: 'Rent payment', paymentMethod: 'bank' },
+    { id: 'e18', date: format(subDays(subMonths(today, 2), 12), 'yyyy-MM-dd'), amount: 300.00, category: 'travel', description: 'Weekend trip', paymentMethod: 'mastercard' },
+  ]
+
+  // Mock income over the last 3 months
+  const mockIncome = [
+    { id: 'i1', date: format(subDays(today, 1), 'yyyy-MM-dd'), amount: 4500.00, source: 'daily_job', notes: 'Salary deposit' },
+    { id: 'i2', date: format(subDays(today, 15), 'yyyy-MM-dd'), amount: 500.00, source: 'freelance', notes: 'Side project' },
+    { id: 'i3', date: format(subMonths(today, 1), 'yyyy-MM-dd'), amount: 4500.00, source: 'daily_job', notes: 'Salary deposit' },
+    { id: 'i4', date: format(subDays(subMonths(today, 1), 10), 'yyyy-MM-dd'), amount: 200.00, source: 'investments', notes: 'Dividend payment' },
+    { id: 'i5', date: format(subMonths(today, 2), 'yyyy-MM-dd'), amount: 4500.00, source: 'daily_job', notes: 'Salary deposit' },
+    { id: 'i6', date: format(subDays(subMonths(today, 2), 20), 'yyyy-MM-dd'), amount: 800.00, source: 'business', notes: 'Client payment' },
+  ]
+
+  // Mock budgets
+  const mockBudgets = {
+    food: 600,
+    transport: 200,
+    utilities: 200,
+    entertainment: 150,
+    shopping: 300,
+    health: 100,
+    dining: 200,
+    subscriptions: 50,
+    housing: 1600,
+    insurance: 250,
+    travel: 300,
+  }
+
+  return {
+    expenses: mockExpenses,
+    income: mockIncome,
+    budgets: mockBudgets,
+    customCategories: [],
+    settings: {
+      currency: 'CAD',
+      currencySymbol: '$',
+    },
+    setupComplete: true,
+  }
+}
 
 const currencies = [
   { code: 'CAD', symbol: '$', name: 'Canadian Dollar', flag: '🇨🇦' },
@@ -47,7 +116,7 @@ const randomColor = () => {
 }
 
 // Step 1: Welcome
-function WelcomeStep({ onNext, onImport, isImporting, importSuccess }) {
+function WelcomeStep({ onNext, onImport, onDemo, isImporting, importSuccess }) {
   const fileInputRef = useRef(null)
 
   return (
@@ -146,6 +215,16 @@ function WelcomeStep({ onNext, onImport, isImporting, importSuccess }) {
         <Sparkles className="w-4 h-4" />
         Set Up New
         <ArrowRight className="w-4 h-4" />
+      </button>
+
+      {/* Try Demo */}
+      <button 
+        onClick={onDemo}
+        disabled={isImporting}
+        className="btn btn-ghost w-full py-3 mt-3"
+      >
+        <Play className="w-4 h-4" />
+        Try Demo with Sample Data
       </button>
     </motion.div>
   )
@@ -478,6 +557,12 @@ export default function Onboarding() {
     toast.success('Welcome to MoneyTracker!')
   }
 
+  const handleDemo = () => {
+    const mockData = generateMockData()
+    dispatch({ type: 'IMPORT_DATA', payload: mockData })
+    toast.success('Demo data loaded! Explore the app.')
+  }
+
   const totalSteps = 3
 
   return (
@@ -523,6 +608,7 @@ export default function Onboarding() {
               key="welcome"
               onNext={() => setStep(2)}
               onImport={handleImport}
+              onDemo={handleDemo}
               isImporting={isImporting}
               importSuccess={importSuccess}
             />
