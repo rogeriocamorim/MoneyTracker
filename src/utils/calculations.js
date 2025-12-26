@@ -1,4 +1,4 @@
-import { startOfMonth, endOfMonth, isWithinInterval, format, parseISO, subMonths } from 'date-fns'
+import { startOfMonth, endOfMonth, startOfYear, isWithinInterval, format, parseISO, subMonths } from 'date-fns'
 
 export const formatCurrency = (amount, symbol = '$') => {
   return `${symbol}${amount.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -113,6 +113,49 @@ export const getCombinedTrend = (expenses, income, months = 6) => {
     income: incomeTrend[i]?.total || 0,
     savings: (incomeTrend[i]?.total || 0) - exp.total,
   }))
+}
+
+// Get date range for a period
+export const getDateRangeForPeriod = (period) => {
+  const now = new Date()
+  
+  switch (period) {
+    case 'this_month':
+      return { start: startOfMonth(now), end: endOfMonth(now) }
+    case 'last_month':
+      const lastMonth = subMonths(now, 1)
+      return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) }
+    case 'last_3_months':
+      return { start: startOfMonth(subMonths(now, 2)), end: endOfMonth(now) }
+    case 'last_6_months':
+      return { start: startOfMonth(subMonths(now, 5)), end: endOfMonth(now) }
+    case 'this_year':
+      return { start: startOfYear(now), end: endOfMonth(now) }
+    case 'all_time':
+    default:
+      return { start: new Date(2000, 0, 1), end: new Date(2100, 11, 31) }
+  }
+}
+
+// Filter expenses by date range
+export const filterByDateRange = (items, dateRange) => {
+  return items.filter(item => {
+    const itemDate = parseISO(item.date)
+    return isWithinInterval(itemDate, dateRange)
+  })
+}
+
+// Get period label for display
+export const getPeriodLabel = (period) => {
+  const labels = {
+    this_month: 'This Month',
+    last_month: 'Last Month',
+    last_3_months: 'Last 3 Months',
+    last_6_months: 'Last 6 Months',
+    this_year: 'This Year',
+    all_time: 'All Time',
+  }
+  return labels[period] || 'This Month'
 }
 
 

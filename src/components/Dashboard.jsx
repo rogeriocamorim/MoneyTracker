@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { motion } from 'framer-motion'
 import { 
@@ -7,7 +7,9 @@ import {
   Wallet, 
   Target,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Calendar,
+  ChevronDown
 } from 'lucide-react'
 import {
   AreaChart,
@@ -25,16 +27,26 @@ import {
   Legend
 } from 'recharts'
 import { useMoney } from '../context/MoneyContext'
-import { expenseCategories, getCategoryById, getAllCategories } from '../data/categories'
+import { getCategoryById, getAllCategories } from '../data/categories'
 import { 
   formatCurrency, 
-  getMonthlyExpenses, 
-  getMonthlyIncome,
   getTotal,
   getTotalByCategory,
   getCombinedTrend,
-  getBudgetProgress
+  getBudgetProgress,
+  getDateRangeForPeriod,
+  filterByDateRange,
+  getPeriodLabel
 } from '../utils/calculations'
+
+const periods = [
+  { id: 'this_month', label: 'This Month' },
+  { id: 'last_month', label: 'Last Month' },
+  { id: 'last_3_months', label: 'Last 3 Months' },
+  { id: 'last_6_months', label: 'Last 6 Months' },
+  { id: 'this_year', label: 'This Year' },
+  { id: 'all_time', label: 'All Time' },
+]
 
 const container = {
   hidden: { opacity: 0 },
@@ -86,42 +98,150 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
+function PeriodSelector({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const selectedPeriod = periods.find(p => p.id === value) || periods[0]
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="btn btn-secondary flex items-center gap-2"
+      >
+        <Calendar className="w-4 h-4" />
+        <span>{selectedPeriod.label}</span>
+        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute right-0 mt-2 w-48 card z-20" style={{ padding: '8px' }}>
+            {periods.map(period => (
+              <button
+                key={period.id}
+                onClick={() => {
+                  onChange(period.id)
+                  setIsOpen(false)
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-[14px] transition-colors ${
+                  value === period.id 
+                    ? 'bg-[var(--color-accent-muted)] text-[var(--color-accent)] font-medium' 
+                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                }`}
+              >
+                {period.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { state } = useMoney()
+  const [selectedPeriod, setSelectedPeriod] = useState('this_month')
 
-  const monthlyExpenses = getMonthlyExpenses(state.expenses)
-  const monthlyIncome = getMonthlyIncome(state.income)
-  const totalExpenses = getTotal(monthlyExpenses)
-  const totalIncome = getTotal(monthlyIncome)
+  // Get date range for selected period
+  const dateRange = useMemo(() => getDateRangeForPeriod(selectedPeriod), [selectedPeriod])
+  
+  // Filter data by selected period
+  const filteredExpenses = useMemo(() => 
+    filterByDateRange(state.expenses, dateRange), 
+    [state.expenses, dateRange]
+  )
+  const filteredIncome = useMemo(() => 
+    filterByDateRange(state.income, dateRange), 
+    [state.income, dateRange]
+  )
+
+  const totalExpenses = getTotal(filteredExpenses)
+  const totalIncome = getTotal(filteredIncome)
   const savings = totalIncome - totalExpenses
   const totalBudget = Object.values(state.budgets).reduce((sum, b) => sum + b, 0)
-  const budgetPercentage = totalBudget > 0 ? Math.round((totalExpenses / totalBudget) * 100) : 0
+  
+  // Calculate budget usage - for periods other than "this month", show average monthly spending
+  const monthsInPeriod = useMemo(() => {
+    switch (selectedPeriod) {
+      case 'this_month':
+      case 'last_month':
+        return 1
+      case 'last_3_months':
+        return 3
+      case 'last_6_months':
+        return 6
+      case 'this_year':
+        return new Date().getMonth() + 1
+      case 'all_time':
+        return Math.max(1, Math.ceil((new Date() - new Date(Math.min(...state.expenses.map(e => new Date(e.date))))) / (1000 * 60 * 60 * 24 * 30)))
+      default:
+        return 1
+    }
+  }, [selectedPeriod, state.expenses])
+  
+  const avgMonthlyExpenses = totalExpenses / monthsInPeriod
+  const budgetPercentage = totalBudget > 0 ? Math.round((avgMonthlyExpenses / totalBudget) * 100) : 0
   
   const allCategories = getAllCategories(state.customCategories)
   
   const categoryTotals = useMemo(() => {
-    const totals = getTotalByCategory(monthlyExpenses)
+    const totals = getTotalByCategory(filteredExpenses)
     return allCategories
       .map(cat => ({ name: cat.name, value: totals[cat.id] || 0, color: cat.color, id: cat.id }))
       .filter(cat => cat.value > 0)
       .sort((a, b) => b.value - a.value)
-  }, [monthlyExpenses, allCategories])
+  }, [filteredExpenses, allCategories])
 
-  const trendData = useMemo(() => getCombinedTrend(state.expenses, state.income, 6), [state.expenses, state.income])
+  // Trend chart shows data based on period
+  const trendMonths = useMemo(() => {
+    switch (selectedPeriod) {
+      case 'this_month':
+      case 'last_month':
+        return 3
+      case 'last_3_months':
+        return 3
+      case 'last_6_months':
+        return 6
+      case 'this_year':
+        return 12
+      case 'all_time':
+        return 12
+      default:
+        return 6
+    }
+  }, [selectedPeriod])
+
+  const trendData = useMemo(() => getCombinedTrend(state.expenses, state.income, trendMonths), [state.expenses, state.income, trendMonths])
 
   const budgetChartData = useMemo(() => {
-    const progress = getBudgetProgress(monthlyExpenses, state.budgets)
+    const progress = getBudgetProgress(filteredExpenses, state.budgets)
     return progress
       .filter(b => b.budget > 0)
       .sort((a, b) => b.percentage - a.percentage)
       .slice(0, 5)
       .map(item => ({ ...item, name: getCategoryById(item.category, state.customCategories)?.name || item.category }))
-  }, [monthlyExpenses, state.budgets, state.customCategories])
+  }, [filteredExpenses, state.budgets, state.customCategories])
 
-  const currentMonth = format(new Date(), 'MMMM yyyy')
+  const periodLabel = getPeriodLabel(selectedPeriod)
 
   return (
     <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">
+      {/* Header with Period Selector */}
+      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Dashboard</h1>
+          <p className="text-[13px] text-[var(--color-text-muted)]">
+            Overview for {periodLabel.toLowerCase()}
+          </p>
+        </div>
+        <PeriodSelector value={selectedPeriod} onChange={setSelectedPeriod} />
+      </motion.div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -142,7 +262,7 @@ export default function Dashboard() {
         />
         <StatCard
           icon={Wallet}
-          label="Savings"
+          label="Net Savings"
           value={formatCurrency(Math.abs(savings))}
           trend={savings >= 0 ? 'up' : 'down'}
           color={savings >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}
@@ -150,7 +270,7 @@ export default function Dashboard() {
         />
         <StatCard
           icon={Target}
-          label="Budget Used"
+          label={selectedPeriod === 'this_month' ? 'Budget Used' : 'Avg Budget/Mo'}
           value={`${budgetPercentage}%`}
           color="var(--color-accent)"
           bgColor="var(--color-accent-muted)"
@@ -199,7 +319,7 @@ export default function Dashboard() {
               <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-muted)] flex items-center justify-center mb-4">
                 <TrendingDown className="w-8 h-8 text-[var(--color-text-muted)]" />
               </div>
-              <p className="text-[var(--color-text-muted)]">No expenses this month</p>
+              <p className="text-[var(--color-text-muted)]">No expenses in this period</p>
             </div>
           ) : (
             <div style={{ height: 280 }} className="flex items-center">
@@ -228,9 +348,16 @@ export default function Dashboard() {
 
       {/* Budget Progress */}
       <motion.div variants={item} className="card">
-        <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-6">
-          Budget Progress
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">
+            Budget Progress
+          </h3>
+          {selectedPeriod !== 'this_month' && (
+            <span className="text-[12px] text-[var(--color-text-muted)]">
+              Based on spending in selected period
+            </span>
+          )}
+        </div>
         {budgetChartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-muted)] flex items-center justify-center mb-4">
@@ -261,7 +388,7 @@ export default function Dashboard() {
           Recent Activity
         </h3>
         <div className="space-y-1">
-          {[...monthlyExpenses, ...monthlyIncome.map(i => ({ ...i, isIncome: true }))]
+          {[...filteredExpenses, ...filteredIncome.map(i => ({ ...i, isIncome: true }))]
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, 5)
             .map(tx => {
@@ -284,9 +411,9 @@ export default function Dashboard() {
                 </div>
               )
             })}
-          {monthlyExpenses.length === 0 && monthlyIncome.length === 0 && (
+          {filteredExpenses.length === 0 && filteredIncome.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-[var(--color-text-muted)]">No transactions yet</p>
+              <p className="text-[var(--color-text-muted)]">No transactions in this period</p>
             </div>
           )}
         </div>
