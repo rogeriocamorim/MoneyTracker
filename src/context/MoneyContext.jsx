@@ -1,18 +1,18 @@
 import { createContext, useContext, useReducer, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { loadData, saveData } from '../utils/storage'
-import { defaultBudgets } from '../data/categories'
 
 const MoneyContext = createContext(null)
 
 const initialState = {
   expenses: [],
   income: [],
-  budgets: defaultBudgets,
+  budgets: {},
   settings: {
     currency: 'CAD',
     currencySymbol: '$',
   },
+  setupComplete: false,
   isLoaded: false,
 }
 
@@ -22,8 +22,13 @@ function reducer(state, action) {
       return { 
         ...state, 
         ...action.payload,
-        budgets: { ...defaultBudgets, ...action.payload.budgets },
         isLoaded: true,
+      }
+    
+    case 'COMPLETE_SETUP':
+      return {
+        ...state,
+        setupComplete: true,
       }
     
     case 'ADD_EXPENSE':
@@ -95,13 +100,17 @@ function reducer(state, action) {
       return {
         ...initialState,
         isLoaded: true,
+        setupComplete: false,
       }
     
     case 'IMPORT_DATA':
       return {
         ...state,
-        ...action.payload,
-        budgets: { ...defaultBudgets, ...action.payload.budgets },
+        expenses: action.payload.expenses || [],
+        income: action.payload.income || [],
+        budgets: action.payload.budgets || {},
+        settings: action.payload.settings || state.settings,
+        setupComplete: true,
       }
     
     default:
@@ -118,7 +127,7 @@ export function MoneyProvider({ children }) {
     dispatch({ type: 'LOAD_DATA', payload: data })
   }, [])
 
-  // Save data whenever it changes
+  // Save data whenever it changes (auto-save)
   useEffect(() => {
     if (state.isLoaded) {
       const { isLoaded, ...dataToSave } = state
@@ -128,6 +137,7 @@ export function MoneyProvider({ children }) {
 
   const actions = {
     dispatch,
+    completeSetup: () => dispatch({ type: 'COMPLETE_SETUP' }),
     addExpense: (expense) => dispatch({ type: 'ADD_EXPENSE', payload: expense }),
     updateExpense: (expense) => dispatch({ type: 'UPDATE_EXPENSE', payload: expense }),
     deleteExpense: (id) => dispatch({ type: 'DELETE_EXPENSE', payload: id }),

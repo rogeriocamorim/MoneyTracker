@@ -31,23 +31,8 @@ export const incomeSources = [
   { id: 'other', name: 'Other', icon: 'Wallet', color: '#6b7280' },
 ]
 
-export const defaultBudgets = {
-  food: 800,
-  transport: 200,
-  utilities: 300,
-  entertainment: 150,
-  shopping: 200,
-  health: 100,
-  education: 100,
-  dining: 200,
-  subscriptions: 100,
-  housing: 1500,
-  insurance: 200,
-  personal: 100,
-  gifts: 50,
-  travel: 200,
-  other: 100,
-}
+// No default budgets - user sets these up during onboarding or manually
+export const defaultBudgets = {}
 
 export const getCategoryById = (id) => expenseCategories.find(c => c.id === id)
 export const getPaymentMethodById = (id) => paymentMethods.find(p => p.id === id)

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Toaster } from 'react-hot-toast'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -25,34 +24,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)]">
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: 'var(--color-bg-elevated)',
-            color: 'var(--color-text-primary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '12px',
-            fontSize: '14px',
-            padding: '12px 16px',
-            boxShadow: 'var(--shadow-lg)',
-          },
-          success: {
-            iconTheme: {
-              primary: 'var(--color-success)',
-              secondary: 'white',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: 'var(--color-danger)',
-              secondary: 'white',
-            },
-          },
-        }}
-      />
-      
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
