@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { 
   Download, 
   Upload, 
@@ -6,10 +7,22 @@ import {
   CheckCircle, 
   DollarSign,
   Database,
-  Trash2
+  Trash2,
+  Shield
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { exportToJson, importFromJson } from '../utils/storage'
+
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.05 } }
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+}
 
 const currencies = [
   { code: 'CAD', symbol: '$', name: 'Canadian Dollar' },
@@ -23,15 +36,13 @@ const currencies = [
 
 export default function Settings() {
   const { state, updateSettings, importData } = useMoney()
-  const [message, setMessage] = useState(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const fileInputRef = useRef(null)
 
   const handleExport = () => {
     const { isLoaded, ...dataToExport } = state
     exportToJson(dataToExport)
-    setMessage({ type: 'success', text: 'Data exported successfully!' })
-    setTimeout(() => setMessage(null), 3000)
+    toast.success('Data exported successfully!')
   }
 
   const handleImportClick = () => {
@@ -45,14 +56,12 @@ export default function Settings() {
     try {
       const data = await importFromJson(file)
       importData(data)
-      setMessage({ type: 'success', text: 'Data imported successfully!' })
+      toast.success('Data imported successfully!')
     } catch (error) {
-      setMessage({ type: 'error', text: error.message })
+      toast.error(error.message)
     }
 
-    // Reset file input
     e.target.value = ''
-    setTimeout(() => setMessage(null), 5000)
   }
 
   const handleCurrencyChange = (e) => {
@@ -62,17 +71,16 @@ export default function Settings() {
         currency: currency.code,
         currencySymbol: currency.symbol,
       })
-      setMessage({ type: 'success', text: 'Currency updated!' })
-      setTimeout(() => setMessage(null), 3000)
+      toast.success('Currency updated!')
     }
   }
 
   const handleClearAllData = () => {
     localStorage.clear()
-    window.location.reload()
+    toast.success('All data cleared!')
+    setTimeout(() => window.location.reload(), 500)
   }
 
-  // Stats
   const stats = {
     expenses: state.expenses.length,
     income: state.income.length,
@@ -80,34 +88,21 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Message */}
-      {message && (
-        <div 
-          className={`p-4 rounded-xl flex items-center gap-3 ${
-            message.type === 'success' 
-              ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' 
-              : 'bg-[var(--color-danger)]/10 text-[var(--color-danger)]'
-          }`}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 shrink-0" />
-          ) : (
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-          )}
-          <p className="text-sm font-medium">{message.text}</p>
-        </div>
-      )}
-
+    <motion.div 
+      className="max-w-2xl space-y-6"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
       {/* Currency Settings */}
-      <div className="bg-[var(--color-bg-card)] rounded-2xl p-6 border border-[var(--color-border)]">
-        <div className="flex items-center gap-3 mb-4">
+      <motion.div variants={item} className="glass-card rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center">
             <DollarSign className="w-5 h-5 text-[var(--color-accent)]" />
           </div>
           <div>
             <h3 className="font-semibold text-[var(--color-text-primary)]">Currency</h3>
-            <p className="text-sm text-[var(--color-text-muted)]">Set your preferred currency</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Set your preferred currency</p>
           </div>
         </div>
         
@@ -122,65 +117,74 @@ export default function Settings() {
             </option>
           ))}
         </select>
-      </div>
+      </motion.div>
 
       {/* Data Statistics */}
-      <div className="bg-[var(--color-bg-card)] rounded-2xl p-6 border border-[var(--color-border)]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-[var(--color-info)]/10 flex items-center justify-center">
+      <motion.div variants={item} className="glass-card rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-info-muted)] flex items-center justify-center">
             <Database className="w-5 h-5 text-[var(--color-info)]" />
           </div>
           <div>
             <h3 className="font-semibold text-[var(--color-text-primary)]">Your Data</h3>
-            <p className="text-sm text-[var(--color-text-muted)]">Overview of stored data</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Overview of stored information</p>
           </div>
         </div>
         
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-4 bg-[var(--color-bg-secondary)] rounded-xl">
             <p className="text-2xl font-bold font-mono text-[var(--color-text-primary)]">
               {stats.expenses}
             </p>
-            <p className="text-sm text-[var(--color-text-muted)]">Expenses</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">Expenses</p>
           </div>
           <div className="text-center p-4 bg-[var(--color-bg-secondary)] rounded-xl">
             <p className="text-2xl font-bold font-mono text-[var(--color-text-primary)]">
               {stats.income}
             </p>
-            <p className="text-sm text-[var(--color-text-muted)]">Income entries</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">Income</p>
           </div>
           <div className="text-center p-4 bg-[var(--color-bg-secondary)] rounded-xl">
             <p className="text-2xl font-bold font-mono text-[var(--color-text-primary)]">
               {stats.budgetsSet}
             </p>
-            <p className="text-sm text-[var(--color-text-muted)]">Budgets set</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">Budgets</p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Export/Import */}
-      <div className="bg-[var(--color-bg-card)] rounded-2xl p-6 border border-[var(--color-border)]">
-        <h3 className="font-semibold text-[var(--color-text-primary)] mb-2">Backup & Restore</h3>
-        <p className="text-sm text-[var(--color-text-muted)] mb-4">
-          Export your data as a JSON file for backup, or import a previous backup.
-        </p>
+      <motion.div variants={item} className="glass-card rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-success-muted)] flex items-center justify-center">
+            <Shield className="w-5 h-5 text-[var(--color-success)]" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-[var(--color-text-primary)]">Backup & Restore</h3>
+            <p className="text-xs text-[var(--color-text-muted)]">Export or import your data</p>
+          </div>
+        </div>
         
         <div className="flex gap-3">
-          <button
+          <motion.button
             onClick={handleExport}
-            className="flex-1 px-4 py-3 rounded-xl bg-[var(--color-accent)] text-[var(--color-bg-primary)] font-semibold flex items-center justify-center gap-2 hover:bg-[var(--color-accent-hover)] transition-colors"
+            className="flex-1 px-4 py-3 rounded-xl btn-primary flex items-center justify-center gap-2"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
-            <Download className="w-5 h-5" />
-            Export Data
-          </button>
+            <Download className="w-4 h-4" />
+            Export
+          </motion.button>
           
-          <button
+          <motion.button
             onClick={handleImportClick}
-            className="flex-1 px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-semibold flex items-center justify-center gap-2 hover:bg-[var(--color-bg-hover)] border border-[var(--color-border)] transition-colors"
+            className="flex-1 px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-semibold flex items-center justify-center gap-2 border border-[var(--color-border)] hover:border-[var(--color-border-hover)] transition-colors"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
-            <Upload className="w-5 h-5" />
-            Import Data
-          </button>
+            <Upload className="w-4 h-4" />
+            Import
+          </motion.button>
           
           <input
             ref={fileInputRef}
@@ -191,29 +195,35 @@ export default function Settings() {
           />
         </div>
         
-        <p className="text-xs text-[var(--color-text-muted)] mt-3">
-          Note: Importing data will replace all your current data.
+        <p className="text-xs text-[var(--color-text-muted)] mt-3 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3" />
+          Importing will replace all current data
         </p>
-      </div>
+      </motion.div>
 
       {/* Danger Zone */}
-      <div className="bg-[var(--color-bg-card)] rounded-2xl p-6 border border-[var(--color-danger)]/30">
-        <h3 className="font-semibold text-[var(--color-danger)] mb-2">Danger Zone</h3>
-        <p className="text-sm text-[var(--color-text-muted)] mb-4">
-          Permanently delete all your data. This action cannot be undone.
-        </p>
+      <motion.div variants={item} className="glass-card rounded-2xl p-6 border-[var(--color-danger)]/20">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-danger-muted)] flex items-center justify-center">
+            <Trash2 className="w-5 h-5 text-[var(--color-danger)]" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-[var(--color-danger)]">Danger Zone</h3>
+            <p className="text-xs text-[var(--color-text-muted)]">Irreversible actions</p>
+          </div>
+        </div>
         
         {showClearConfirm ? (
           <div className="flex items-center gap-3">
             <button
               onClick={handleClearAllData}
-              className="px-4 py-2 rounded-xl bg-[var(--color-danger)] text-white font-semibold hover:bg-[var(--color-danger)]/80 transition-colors"
+              className="px-4 py-2 rounded-xl bg-[var(--color-danger)] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
             >
               Yes, delete everything
             </button>
             <button
               onClick={() => setShowClearConfirm(false)}
-              className="px-4 py-2 rounded-xl bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] font-semibold hover:bg-[var(--color-bg-hover)] transition-colors"
+              className="px-4 py-2 rounded-xl bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] font-semibold text-sm hover:bg-[var(--color-bg-hover)] transition-colors"
             >
               Cancel
             </button>
@@ -221,21 +231,19 @@ export default function Settings() {
         ) : (
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="px-4 py-3 rounded-xl bg-[var(--color-danger)]/10 text-[var(--color-danger)] font-semibold flex items-center gap-2 hover:bg-[var(--color-danger)]/20 transition-colors"
+            className="px-4 py-3 rounded-xl bg-[var(--color-danger-muted)] text-[var(--color-danger)] font-semibold text-sm flex items-center gap-2 hover:bg-[var(--color-danger)]/20 transition-colors"
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4" />
             Clear All Data
           </button>
         )}
-      </div>
+      </motion.div>
 
       {/* Info */}
-      <div className="text-center text-sm text-[var(--color-text-muted)] space-y-1">
-        <p>MoneyTracker v1.0.0</p>
-        <p>Your data is stored locally in your browser.</p>
-        <p>Remember to export backups regularly!</p>
-      </div>
-    </div>
+      <motion.div variants={item} className="text-center text-sm text-[var(--color-text-muted)] space-y-1 py-4">
+        <p className="font-medium">MoneyTracker v1.0.0</p>
+        <p>Data stored locally in your browser</p>
+      </motion.div>
+    </motion.div>
   )
 }
-
