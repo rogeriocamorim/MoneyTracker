@@ -1,22 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, CreditCard, Landmark } from 'lucide-react'
+import { X, Save, Plus, CreditCard, Landmark, PlusCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { expenseCategories, paymentMethods, getAllCategories, getCategoryById } from '../data/categories'
 
+// Random color generator for new categories
+const getRandomColor = () => {
+  const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899']
+  return colors[Math.floor(Math.random() * colors.length)]
+}
+
 export default function ExpenseForm({ expense = null, onClose }) {
-  const { state, addExpense, updateExpense } = useMoney()
+  const { state, dispatch, addExpense, updateExpense } = useMoney()
   const isEditing = !!expense
   
   // Combine predefined and custom categories
   const allCategories = getAllCategories(state.customCategories)
+  
+  // Separate budget categories from other categories
+  const { budgetCategories, otherCategories } = useMemo(() => {
+    const budgetIds = Object.keys(state.budgets)
+    const budget = allCategories.filter(cat => budgetIds.includes(cat.id))
+    const other = allCategories.filter(cat => !budgetIds.includes(cat.id))
+    return { budgetCategories: budget, otherCategories: other }
+  }, [allCategories, state.budgets])
+  
+  // Default to first budget category, or first category overall
+  const defaultCategory = budgetCategories[0]?.id || allCategories[0]?.id || 'food'
+  
+  const [showAddCategory, setShowAddCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     amount: '',
-    category: allCategories[0]?.id || 'food',
+    category: defaultCategory,
     description: '',
     paymentMethod: 'bank',
   })
@@ -103,27 +123,94 @@ export default function ExpenseForm({ expense = null, onClose }) {
               </div>
             </div>
 
-            {/* Date & Category */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Date</label>
-                <input type="date" name="date" value={formData.date} onChange={handleChange} required className="input" />
-              </div>
-              <div>
-                <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Category</label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                  className="input"
-                  style={{ borderLeft: `4px solid ${selectedCategory?.color || '#6b7280'}` }}
-                >
-                  {allCategories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Date */}
+            <div>
+              <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Date</label>
+              <input type="date" name="date" value={formData.date} onChange={handleChange} required className="input" />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-[12px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Category</label>
+              {!showAddCategory ? (
+                <div className="space-y-2">
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    required
+                    className="input"
+                    style={{ borderLeft: `4px solid ${selectedCategory?.color || '#6b7280'}` }}
+                  >
+                    {budgetCategories.length > 0 && (
+                      <optgroup label="📊 Budget Categories">
+                        {budgetCategories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {otherCategories.length > 0 && (
+                      <optgroup label="📁 Other Categories">
+                        {otherCategories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAddCategory(true)}
+                    className="text-[12px] text-[var(--color-accent)] hover:underline flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-3 h-3" /> Add new category
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Enter category name"
+                    className="input"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setShowAddCategory(false)
+                        setNewCategoryName('')
+                      }}
+                      className="btn btn-secondary flex-1 text-[13px]"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        if (newCategoryName.trim()) {
+                          const newId = newCategoryName.toLowerCase().replace(/\s+/g, '-')
+                          const newCategory = {
+                            id: newId,
+                            name: newCategoryName.trim(),
+                            color: getRandomColor()
+                          }
+                          dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: [newCategory] })
+                          setFormData(prev => ({ ...prev, category: newId }))
+                          setNewCategoryName('')
+                          setShowAddCategory(false)
+                          toast.success(`Category "${newCategoryName}" added`)
+                        }
+                      }}
+                      disabled={!newCategoryName.trim()}
+                      className="btn btn-primary flex-1 text-[13px]"
+                    >
+                      <Plus className="w-3 h-3" /> Add
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Payment Method */}
