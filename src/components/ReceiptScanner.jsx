@@ -355,52 +355,50 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                 </button>
               </div>
 
-              {/* Scan with Phone option - only show on desktop */}
-              {!isMobile && (
-                <div className="pt-4 border-t border-[var(--color-border)]">
-                  <button
-                    onClick={() => setShowQRCode(!showQRCode)}
-                    className="btn btn-ghost w-full justify-center"
+              {/* Scan with Phone option */}
+              <div className="pt-4 border-t border-[var(--color-border)]">
+                <button
+                  onClick={() => setShowQRCode(!showQRCode)}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-[var(--color-text-primary)] font-medium flex items-center justify-center gap-2 hover:from-purple-500/30 hover:to-pink-500/30 transition-all"
+                >
+                  <Smartphone className="w-5 h-5 text-purple-400" />
+                  {showQRCode ? 'Hide QR Code' : '📱 Scan with Phone Instead'}
+                </button>
+                
+                {showQRCode && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 text-center"
                   >
-                    <Smartphone className="w-4 h-4" />
-                    {showQRCode ? 'Hide QR Code' : 'Scan with Phone Instead'}
-                  </button>
-                  
-                  {showQRCode && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-4 text-center"
+                    <div className="inline-block p-4 bg-white rounded-xl shadow-lg">
+                      <QRCodeSVG 
+                        value={mobileUrl} 
+                        size={180}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                    <p className="text-[13px] text-[var(--color-text-muted)] mt-3">
+                      Scan this QR code with your phone camera
+                    </p>
+                    <p className="text-[12px] text-[var(--color-text-muted)] mt-1">
+                      Take a photo on your phone, then sync via Google Drive
+                    </p>
+                    
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(mobileUrl)
+                        toast.success('Link copied to clipboard!')
+                      }}
+                      className="btn btn-ghost text-[13px] mt-2"
                     >
-                      <div className="inline-block p-4 bg-white rounded-xl shadow-lg">
-                        <QRCodeSVG 
-                          value={mobileUrl} 
-                          size={180}
-                          level="M"
-                          includeMargin={false}
-                        />
-                      </div>
-                      <p className="text-[13px] text-[var(--color-text-muted)] mt-3">
-                        Scan this QR code with your phone camera
-                      </p>
-                      <p className="text-[12px] text-[var(--color-text-muted)] mt-1">
-                        Take a photo on your phone, then sync via Google Drive
-                      </p>
-                      
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(mobileUrl)
-                          toast.success('Link copied to clipboard!')
-                        }}
-                        className="btn btn-ghost text-[13px] mt-2"
-                      >
-                        <Copy className="w-3 h-3" /> Copy Link
-                      </button>
-                    </motion.div>
-                  )}
-                </div>
-              )}
+                      <Copy className="w-3 h-3" /> Copy Link
+                    </button>
+                  </motion.div>
+                )}
+              </div>
 
               <input
                 ref={fileInputRef}
