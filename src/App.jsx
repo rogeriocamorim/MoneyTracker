@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { MoneyProvider, useMoney } from './context/MoneyContext'
 import Layout from './components/Layout/Layout'
@@ -9,9 +9,16 @@ import BudgetManager from './components/BudgetManager'
 import Compare from './components/Compare'
 import Settings from './components/Settings'
 import Onboarding from './components/Onboarding'
+import MobileScannerPage from './components/MobileScannerPage'
 
-function AppContent() {
+function AppRoutes() {
   const { state } = useMoney()
+  const location = useLocation()
+
+  // Always allow access to mobile scanner route
+  if (location.pathname === '/scan-receipt') {
+    return <MobileScannerPage />
+  }
 
   // Show loading state while data is being loaded
   if (!state.isLoaded) {
@@ -30,19 +37,26 @@ function AppContent() {
     return <Onboarding />
   }
 
-  // Show main app
+  // Show main app routes
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="expenses" element={<ExpenseList />} />
+        <Route path="income" element={<IncomeList />} />
+        <Route path="budget" element={<BudgetManager />} />
+        <Route path="compare" element={<Compare />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+      <Route path="/scan-receipt" element={<MobileScannerPage />} />
+    </Routes>
+  )
+}
+
+function AppContent() {
   return (
     <HashRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="expenses" element={<ExpenseList />} />
-          <Route path="income" element={<IncomeList />} />
-          <Route path="budget" element={<BudgetManager />} />
-          <Route path="compare" element={<Compare />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
+      <AppRoutes />
     </HashRouter>
   )
 }

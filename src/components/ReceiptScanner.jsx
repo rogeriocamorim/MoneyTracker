@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Upload, X, Loader2, Check, AlertCircle, Receipt, Video, Circle } from 'lucide-react'
+import { Camera, Upload, X, Loader2, Check, AlertCircle, Receipt, Circle, Smartphone, Copy } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import Tesseract from 'tesseract.js'
 import toast from 'react-hot-toast'
 
@@ -13,10 +14,14 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
   const [showCamera, setShowCamera] = useState(false)
   const [cameraStream, setCameraStream] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [showQRCode, setShowQRCode] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
+  
+  // Generate URL for mobile scanning
+  const mobileUrl = `${window.location.origin}${window.location.pathname}#/scan-receipt`
 
   // Detect mobile device
   useEffect(() => {
@@ -335,20 +340,67 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                 </p>
               </div>
 
-              <div className="flex gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="btn btn-secondary flex-1"
+                  className="btn btn-secondary"
                 >
-                  <Upload className="w-4 h-4" /> Choose File
+                  <Upload className="w-4 h-4" /> Upload File
                 </button>
                 <button
                   onClick={handleTakePhoto}
-                  className="btn btn-primary flex-1"
+                  className="btn btn-primary"
                 >
                   <Camera className="w-4 h-4" /> Take Photo
                 </button>
               </div>
+
+              {/* Scan with Phone option - only show on desktop */}
+              {!isMobile && (
+                <div className="pt-4 border-t border-[var(--color-border)]">
+                  <button
+                    onClick={() => setShowQRCode(!showQRCode)}
+                    className="btn btn-ghost w-full justify-center"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    {showQRCode ? 'Hide QR Code' : 'Scan with Phone Instead'}
+                  </button>
+                  
+                  {showQRCode && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 text-center"
+                    >
+                      <div className="inline-block p-4 bg-white rounded-xl shadow-lg">
+                        <QRCodeSVG 
+                          value={mobileUrl} 
+                          size={180}
+                          level="M"
+                          includeMargin={false}
+                        />
+                      </div>
+                      <p className="text-[13px] text-[var(--color-text-muted)] mt-3">
+                        Scan this QR code with your phone camera
+                      </p>
+                      <p className="text-[12px] text-[var(--color-text-muted)] mt-1">
+                        Take a photo on your phone, then sync via Google Drive
+                      </p>
+                      
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(mobileUrl)
+                          toast.success('Link copied to clipboard!')
+                        }}
+                        className="btn btn-ghost text-[13px] mt-2"
+                      >
+                        <Copy className="w-3 h-3" /> Copy Link
+                      </button>
+                    </motion.div>
+                  )}
+                </div>
+              )}
 
               <input
                 ref={fileInputRef}
