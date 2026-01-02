@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Upload, X, Loader2, Check, AlertCircle, Receipt } from 'lucide-react'
+import { Camera, Upload, X, Loader2, Check, AlertCircle, Receipt, Video, Circle } from 'lucide-react'
 import Tesseract from 'tesseract.js'
 import toast from 'react-hot-toast'
 
@@ -10,8 +10,99 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [extractedData, setExtractedData] = useState(null)
+  const [showCamera, setShowCamera] = useState(false)
+  const [cameraStream, setCameraStream] = useState(null)
+  const [isMobile, setIsMobile] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    setIsMobile(checkMobile)
+  }, [])
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [cameraStream])
+
+  // Start camera for desktop
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+      })
+      setCameraStream(stream)
+      setShowCamera(true)
+      
+      // Wait for video element to be available
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      }, 100)
+    } catch (err) {
+      console.error('Camera error:', err)
+      toast.error('Could not access camera. Please upload a file instead.')
+    }
+  }
+
+  // Capture photo from camera
+  const capturePhoto = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(video, 0, 0)
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        setImage(blob)
+        setImagePreview(URL.createObjectURL(blob))
+        setExtractedData(null)
+        
+        // Stop camera
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop())
+          setCameraStream(null)
+        }
+        setShowCamera(false)
+        toast.success('Photo captured!')
+      }
+    }, 'image/jpeg', 0.9)
+  }, [cameraStream])
+
+  // Stop camera
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop())
+      setCameraStream(null)
+    }
+    setShowCamera(false)
+  }
+
+  // Handle "Take Photo" button click
+  const handleTakePhoto = () => {
+    if (isMobile) {
+      // On mobile, use the native camera input
+      cameraInputRef.current?.click()
+    } else {
+      // On desktop, start webcam
+      startCamera()
+    }
+  }
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
@@ -195,8 +286,41 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
             </button>
           </div>
 
+          {/* Camera View (Desktop) */}
+          {showCamera && (
+            <div className="space-y-4">
+              <div className="relative rounded-xl overflow-hidden bg-black">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full max-h-80 object-contain"
+                />
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                  <button
+                    onClick={stopCamera}
+                    className="btn btn-secondary"
+                  >
+                    <X className="w-4 h-4" /> Cancel
+                  </button>
+                  <button
+                    onClick={capturePhoto}
+                    className="w-16 h-16 rounded-full bg-white border-4 border-[var(--color-accent)] flex items-center justify-center hover:scale-105 transition-transform"
+                  >
+                    <Circle className="w-12 h-12 text-[var(--color-danger)] fill-current" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-center text-[13px] text-[var(--color-text-muted)]">
+                Position your receipt in the frame and click the capture button
+              </p>
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+          )}
+
           {/* Upload Area */}
-          {!imagePreview ? (
+          {!imagePreview && !showCamera ? (
             <div className="space-y-4">
               <div 
                 className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-8 text-center hover:border-[var(--color-accent)] transition-colors cursor-pointer"
@@ -219,7 +343,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                   <Upload className="w-4 h-4" /> Choose File
                 </button>
                 <button
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={handleTakePhoto}
                   className="btn btn-primary flex-1"
                 >
                   <Camera className="w-4 h-4" /> Take Photo
@@ -242,7 +366,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                 className="hidden"
               />
             </div>
-          ) : (
+          ) : !showCamera && (
             <div className="space-y-4">
               {/* Image Preview */}
               <div className="relative rounded-xl overflow-hidden bg-[var(--color-bg-muted)]">
@@ -350,18 +474,20 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
             </div>
           )}
 
-          {/* Tips */}
-          <div className="mt-6 p-4 bg-[var(--color-bg-muted)] rounded-xl">
-            <h4 className="text-[13px] font-medium text-[var(--color-text-primary)] mb-2">
-              📸 Tips for best results:
-            </h4>
-            <ul className="text-[12px] text-[var(--color-text-muted)] space-y-1">
-              <li>• Good lighting, avoid shadows</li>
-              <li>• Keep receipt flat, avoid wrinkles</li>
-              <li>• Include the total amount in frame</li>
-              <li>• Works best with printed receipts</li>
-            </ul>
-          </div>
+          {/* Tips - hide when camera is active */}
+          {!showCamera && (
+            <div className="mt-6 p-4 bg-[var(--color-bg-muted)] rounded-xl">
+              <h4 className="text-[13px] font-medium text-[var(--color-text-primary)] mb-2">
+                📸 Tips for best results:
+              </h4>
+              <ul className="text-[12px] text-[var(--color-text-muted)] space-y-1">
+                <li>• Good lighting, avoid shadows</li>
+                <li>• Keep receipt flat, avoid wrinkles</li>
+                <li>• Include the total amount in frame</li>
+                <li>• Works best with printed receipts</li>
+              </ul>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
