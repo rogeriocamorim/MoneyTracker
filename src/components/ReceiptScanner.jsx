@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Upload, X, Loader2, Check, AlertCircle, Receipt, Circle, Smartphone, Copy } from 'lucide-react'
+import { Camera, Upload, X, Loader2, Check, AlertCircle, Receipt, Circle, Smartphone, Copy, Download } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import Tesseract from 'tesseract.js'
 import toast from 'react-hot-toast'
+
+const PENDING_RECEIPT_KEY = 'moneytracker_pending_receipt'
 
 export default function ReceiptScanner({ onExtracted, onClose }) {
   const [image, setImage] = useState(null)
@@ -15,6 +17,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
   const [cameraStream, setCameraStream] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
+  const [hasPendingReceipt, setHasPendingReceipt] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const videoRef = useRef(null)
@@ -22,6 +25,47 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
   
   // Generate URL for mobile scanning
   const mobileUrl = `${window.location.origin}${window.location.pathname}#/scan-receipt`
+  
+  // Check for pending receipt from phone
+  useEffect(() => {
+    const checkPendingReceipt = () => {
+      const pending = localStorage.getItem(PENDING_RECEIPT_KEY)
+      setHasPendingReceipt(!!pending)
+    }
+    checkPendingReceipt()
+    
+    // Listen for storage changes (in case phone tab is open)
+    window.addEventListener('storage', checkPendingReceipt)
+    return () => window.removeEventListener('storage', checkPendingReceipt)
+  }, [])
+  
+  // Load pending receipt from phone
+  const loadPendingReceipt = () => {
+    try {
+      const pending = localStorage.getItem(PENDING_RECEIPT_KEY)
+      if (pending) {
+        const { image: base64Image, timestamp } = JSON.parse(pending)
+        
+        // Convert base64 to blob
+        fetch(base64Image)
+          .then(res => res.blob())
+          .then(blob => {
+            setImage(blob)
+            setImagePreview(base64Image)
+            setExtractedData(null)
+            
+            // Clear the pending receipt
+            localStorage.removeItem(PENDING_RECEIPT_KEY)
+            setHasPendingReceipt(false)
+            
+            toast.success('Photo loaded from phone!')
+          })
+      }
+    } catch (error) {
+      console.error('Error loading pending receipt:', error)
+      toast.error('Failed to load photo')
+    }
+  }
 
   // Detect mobile device
   useEffect(() => {
@@ -120,26 +164,61 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
 
   const parseReceiptText = (text) => {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    const fullText = text.replace(/\n/g, ' ')
     
-    // Find total amount - look for patterns like "TOTAL $121.03" or "**** TOTAL 121.03"
+    // Find total amount - multiple strategies
     let total = null
-    const totalPatterns = [
-      /(?:total|amount)[:\s]*\$?\s*([\d,]+\.?\d*)/i,
-      /\*+\s*total[:\s]*\$?\s*([\d,]+\.?\d*)/i,
-      /amount[:\s]*\$?\s*([\d,]+\.?\d*)/i,
-      /\$\s*([\d,]+\.\d{2})\s*$/m, // Dollar amount at end of line
-    ]
     
-    for (const line of lines) {
+    // Strategy 1: Look for explicit AMOUNT: $XXX.XX pattern (most reliable)
+    const amountMatch = fullText.match(/AMOUNT[:\s]*\$?\s*([\d,]+\.\d{2})/i)
+    if (amountMatch) {
+      total = parseFloat(amountMatch[1].replace(',', ''))
+    }
+    
+    // Strategy 2: Look for **** TOTAL pattern (Costco style)
+    if (!total) {
+      const starTotalMatch = fullText.match(/\*+\s*TOTAL[:\s]*\$?\s*([\d,]+\.\d{2})/i)
+      if (starTotalMatch) {
+        total = parseFloat(starTotalMatch[1].replace(',', ''))
+      }
+    }
+    
+    // Strategy 3: Look for MasterCard/Visa followed by amount
+    if (!total) {
+      const cardMatch = fullText.match(/(?:mastercard|visa|debit)[:\s]*([\d,]+\.\d{2})/i)
+      if (cardMatch) {
+        total = parseFloat(cardMatch[1].replace(',', ''))
+      }
+    }
+    
+    // Strategy 4: Standard TOTAL patterns
+    if (!total) {
+      const totalPatterns = [
+        /TOTAL[:\s]+\$?\s*([\d,]+\.\d{2})/i,
+        /GRAND\s*TOTAL[:\s]*\$?\s*([\d,]+\.\d{2})/i,
+        /BALANCE\s*DUE[:\s]*\$?\s*([\d,]+\.\d{2})/i,
+      ]
+      
       for (const pattern of totalPatterns) {
-        const match = line.match(pattern)
+        const match = fullText.match(pattern)
         if (match) {
           const value = parseFloat(match[1].replace(',', ''))
-          // Take the largest "total" found (usually the grand total)
-          if (value && (!total || value > total)) {
+          if (value && value > 0) {
             total = value
+            break
           }
         }
+      }
+    }
+    
+    // Strategy 5: Find largest dollar amount as fallback
+    if (!total) {
+      const allAmounts = fullText.match(/\$?\s*([\d,]+\.\d{2})/g) || []
+      const values = allAmounts
+        .map(a => parseFloat(a.replace(/[$,\s]/g, '')))
+        .filter(v => v > 0 && v < 10000) // Reasonable receipt range
+      if (values.length > 0) {
+        total = Math.max(...values)
       }
     }
 
@@ -355,6 +434,32 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                 </button>
               </div>
 
+              {/* Get Photo from Phone - show prominently if available */}
+              {hasPendingReceipt && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/40 rounded-xl"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/30 flex items-center justify-center">
+                      <Smartphone className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-[var(--color-text-primary)] font-medium">Photo from Phone Ready!</p>
+                      <p className="text-[12px] text-[var(--color-text-muted)]">A receipt photo is waiting</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={loadPendingReceipt}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Load Photo & Process
+                  </button>
+                </motion.div>
+              )}
+
               {/* Scan with Phone option */}
               <div className="pt-4 border-t border-[var(--color-border)]">
                 <button
@@ -381,21 +486,33 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                       />
                     </div>
                     <p className="text-[13px] text-[var(--color-text-muted)] mt-3">
-                      Scan this QR code with your phone camera
+                      1. Scan QR code with your phone
                     </p>
                     <p className="text-[12px] text-[var(--color-text-muted)] mt-1">
-                      Take a photo on your phone, then sync via Google Drive
+                      2. Take photo → Click "Send to Desktop"
+                    </p>
+                    <p className="text-[12px] text-[var(--color-text-muted)]">
+                      3. Come back here and click "Load Photo"
                     </p>
                     
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(mobileUrl)
-                        toast.success('Link copied to clipboard!')
-                      }}
-                      className="btn btn-ghost text-[13px] mt-2"
-                    >
-                      <Copy className="w-3 h-3" /> Copy Link
-                    </button>
+                    <div className="flex gap-2 justify-center mt-3">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(mobileUrl)
+                          toast.success('Link copied to clipboard!')
+                        }}
+                        className="btn btn-ghost text-[13px]"
+                      >
+                        <Copy className="w-3 h-3" /> Copy Link
+                      </button>
+                      <button
+                        onClick={loadPendingReceipt}
+                        className="btn btn-primary text-[13px]"
+                        disabled={!hasPendingReceipt}
+                      >
+                        <Download className="w-3 h-3" /> Load Photo
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </div>
