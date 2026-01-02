@@ -166,59 +166,95 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
     const fullText = text.replace(/\n/g, ' ')
     
+    console.log('OCR Text:', text) // Debug: see what OCR reads
+    
     // Find total amount - multiple strategies
     let total = null
     
-    // Strategy 1: Look for explicit AMOUNT: $XXX.XX pattern (most reliable)
-    const amountMatch = fullText.match(/AMOUNT[:\s]*\$?\s*([\d,]+\.\d{2})/i)
-    if (amountMatch) {
-      total = parseFloat(amountMatch[1].replace(',', ''))
-    }
-    
-    // Strategy 2: Look for **** TOTAL pattern (Costco style)
-    if (!total) {
-      const starTotalMatch = fullText.match(/\*+\s*TOTAL[:\s]*\$?\s*([\d,]+\.\d{2})/i)
-      if (starTotalMatch) {
-        total = parseFloat(starTotalMatch[1].replace(',', ''))
-      }
-    }
-    
-    // Strategy 3: Look for MasterCard/Visa followed by amount
-    if (!total) {
-      const cardMatch = fullText.match(/(?:mastercard|visa|debit)[:\s]*([\d,]+\.\d{2})/i)
-      if (cardMatch) {
-        total = parseFloat(cardMatch[1].replace(',', ''))
-      }
-    }
-    
-    // Strategy 4: Standard TOTAL patterns
-    if (!total) {
-      const totalPatterns = [
-        /TOTAL[:\s]+\$?\s*([\d,]+\.\d{2})/i,
-        /GRAND\s*TOTAL[:\s]*\$?\s*([\d,]+\.\d{2})/i,
-        /BALANCE\s*DUE[:\s]*\$?\s*([\d,]+\.\d{2})/i,
-      ]
+    // Strategy 1: COSTCO SPECIFIC - Look for line with amount BEFORE dashed line
+    // The total on Costco receipts is in a black box right above "----"
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      const nextLine = lines[i + 1] || ''
       
-      for (const pattern of totalPatterns) {
-        const match = fullText.match(pattern)
-        if (match) {
-          const value = parseFloat(match[1].replace(',', ''))
-          if (value && value > 0) {
-            total = value
-            break
-          }
+      // Check if next line is dashes (separator)
+      if (nextLine.match(/^[-=]{4,}$/)) {
+        // This line might contain the total - look for amount
+        const amountMatch = line.match(/([\d,]+\.\d{2})\s*$/)
+        if (amountMatch) {
+          total = parseFloat(amountMatch[1].replace(',', ''))
+          console.log('Found total before dashes:', total)
+          break
+        }
+      }
+      
+      // Also check if current line contains TOTAL with amount
+      if (line.match(/\*+\s*TOTAL/i) || line.match(/^TOTAL\b/i)) {
+        const amountMatch = line.match(/([\d,]+\.\d{2})/)
+        if (amountMatch) {
+          total = parseFloat(amountMatch[1].replace(',', ''))
+          console.log('Found total on TOTAL line:', total)
+          break
         }
       }
     }
     
-    // Strategy 5: Find largest dollar amount as fallback
+    // Strategy 2: Look for explicit AMOUNT: $XXX.XX pattern
     if (!total) {
-      const allAmounts = fullText.match(/\$?\s*([\d,]+\.\d{2})/g) || []
+      const amountMatch = fullText.match(/AMOUNT[:\s]*\$?\s*([\d,]+\.\d{2})/i)
+      if (amountMatch) {
+        total = parseFloat(amountMatch[1].replace(',', ''))
+        console.log('Found AMOUNT pattern:', total)
+      }
+    }
+    
+    // Strategy 3: Look for **** TOTAL pattern (Costco style - may have OCR artifacts)
+    if (!total) {
+      // Handle OCR reading it as various forms
+      const starTotalPatterns = [
+        /\*+\s*TOTAL[:\s]*([\d,]+\.\d{2})/i,
+        /TOTAL\s+([\d,]+\.\d{2})/i,
+        /T[O0]TAL[:\s]*([\d,]+\.\d{2})/i, // OCR might read O as 0
+      ]
+      for (const pattern of starTotalPatterns) {
+        const match = fullText.match(pattern)
+        if (match) {
+          total = parseFloat(match[1].replace(',', ''))
+          console.log('Found TOTAL pattern:', total)
+          break
+        }
+      }
+    }
+    
+    // Strategy 4: Look for MasterCard/Visa followed by amount  
+    if (!total) {
+      const cardMatch = fullText.match(/(?:mastercard|visa|master\s*card)[:\s]*([\d,]+\.\d{2})/i)
+      if (cardMatch) {
+        total = parseFloat(cardMatch[1].replace(',', ''))
+        console.log('Found card payment amount:', total)
+      }
+    }
+    
+    // Strategy 5: Look for amount after "APPROVED" or "PURCHASE"
+    if (!total) {
+      const approvedMatch = fullText.match(/(?:APPROVED|PURCHASE)[^\d]*([\d,]+\.\d{2})/i)
+      if (approvedMatch) {
+        total = parseFloat(approvedMatch[1].replace(',', ''))
+        console.log('Found approved/purchase amount:', total)
+      }
+    }
+    
+    // Strategy 6: Find the largest reasonable amount as last resort
+    if (!total) {
+      const allAmounts = text.match(/([\d,]+\.\d{2})/g) || []
       const values = allAmounts
-        .map(a => parseFloat(a.replace(/[$,\s]/g, '')))
-        .filter(v => v > 0 && v < 10000) // Reasonable receipt range
+        .map(a => parseFloat(a.replace(',', '')))
+        .filter(v => v > 10 && v < 5000) // Reasonable receipt range
       if (values.length > 0) {
-        total = Math.max(...values)
+        // Sort and take the largest (usually the total)
+        values.sort((a, b) => b - a)
+        total = values[0]
+        console.log('Using largest amount as fallback:', total)
       }
     }
 
