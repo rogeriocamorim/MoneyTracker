@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Plus, CreditCard, Landmark, PlusCircle } from 'lucide-react'
+import { X, Save, Plus, CreditCard, Landmark, PlusCircle, Receipt } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { expenseCategories, paymentMethods, getAllCategories, getCategoryById } from '../data/categories'
+import ReceiptScanner from './ReceiptScanner'
 
 // Random color generator for new categories
 const getRandomColor = () => {
@@ -32,6 +33,7 @@ export default function ExpenseForm({ expense = null, onClose }) {
   
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [showReceiptScanner, setShowReceiptScanner] = useState(false)
 
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -71,6 +73,16 @@ export default function ExpenseForm({ expense = null, onClose }) {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleReceiptData = (data) => {
+    setFormData(prev => ({
+      ...prev,
+      amount: data.total ? data.total.toString() : prev.amount,
+      date: data.date || prev.date,
+      paymentMethod: data.paymentMethod || prev.paymentMethod,
+      description: data.description || prev.description,
+    }))
+  }
+
   const selectedCategory = getCategoryById(formData.category, state.customCategories)
 
   return (
@@ -98,9 +110,21 @@ export default function ExpenseForm({ expense = null, onClose }) {
                 {isEditing ? 'Update the details' : 'Track your spending'}
               </p>
             </div>
-            <button onClick={onClose} className="btn btn-ghost p-2">
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {!isEditing && (
+                <button 
+                  type="button"
+                  onClick={() => setShowReceiptScanner(true)} 
+                  className="btn btn-secondary p-2"
+                  title="Scan Receipt"
+                >
+                  <Receipt className="w-5 h-5" />
+                </button>
+              )}
+              <button onClick={onClose} className="btn btn-ghost p-2">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -256,6 +280,14 @@ export default function ExpenseForm({ expense = null, onClose }) {
           </form>
         </motion.div>
       </motion.div>
+
+      {/* Receipt Scanner Modal */}
+      {showReceiptScanner && (
+        <ReceiptScanner
+          onExtracted={handleReceiptData}
+          onClose={() => setShowReceiptScanner(false)}
+        />
+      )}
     </AnimatePresence>
   )
 }
