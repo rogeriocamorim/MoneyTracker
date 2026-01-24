@@ -121,9 +121,9 @@ export default function ExpenseList() {
                     </div>
                   </div>
                   <p className="font-mono font-semibold text-[var(--color-danger)]">-{formatCurrency(expense.amount)}</p>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(expense)} className="btn btn-ghost p-2"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(expense.id)} className="btn btn-danger p-2"><Trash2 className="w-4 h-4" /></button>
+                  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(expense)} className="btn btn-ghost p-2" title="Edit expense"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(expense.id)} className="btn btn-danger p-2" title="Delete expense"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               )
