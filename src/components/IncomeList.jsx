@@ -93,9 +93,9 @@ export default function IncomeList() {
                     </div>
                   </div>
                   <p className="font-mono font-semibold text-[var(--color-success)]">+{formatCurrency(income.amount)}</p>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(income)} className="btn btn-ghost p-2"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(income.id)} className="btn btn-danger p-2"><Trash2 className="w-4 h-4" /></button>
+                  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(income)} className="btn btn-ghost p-2" title="Edit income"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(income.id)} className="btn btn-danger p-2" title="Delete income"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               )
