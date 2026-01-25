@@ -1,6 +1,7 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useRef, useCallback, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { loadData, saveData } from '../utils/storage'
+import { saveToGoogleDrive, isSignedIn } from '../utils/googleDrive'
 
 const MoneyContext = createContext(null)
 
@@ -12,6 +13,7 @@ const initialState = {
   settings: {
     currency: 'CAD',
     currencySymbol: '$',
+    autoSyncEnabled: false,
   },
   setupComplete: false,
   isLoaded: false,
@@ -146,8 +148,19 @@ function reducer(state, action) {
   }
 }
 
+const SYNC_DEBOUNCE_MS = 2000 // 2 seconds debounce for Google Drive sync
+
 export function MoneyProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  
+  // Google Drive sync state
+  const [syncStatus, setSyncStatus] = useState({
+    isSyncing: false,
+    lastSyncTime: null,
+    syncError: null,
+  })
+  const syncTimerRef = useRef(null)
+  const pendingDataRef = useRef(null)
 
   // Load data on mount
   useEffect(() => {
@@ -155,13 +168,71 @@ export function MoneyProvider({ children }) {
     dispatch({ type: 'LOAD_DATA', payload: data })
   }, [])
 
-  // Save data whenever it changes (auto-save)
+  // Check if Google Drive is connected
+  const checkGoogleConnection = useCallback(() => {
+    try {
+      return isSignedIn()
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Perform Google Drive sync
+  const performGoogleSync = useCallback(async (data) => {
+    if (!checkGoogleConnection()) return false
+
+    setSyncStatus(prev => ({ ...prev, isSyncing: true, syncError: null }))
+
+    try {
+      await saveToGoogleDrive(data)
+      setSyncStatus(prev => ({ ...prev, isSyncing: false, lastSyncTime: Date.now() }))
+      return true
+    } catch (error) {
+      console.error('Google Drive sync failed:', error)
+      setSyncStatus(prev => ({ ...prev, isSyncing: false, syncError: error.message }))
+      return false
+    }
+  }, [checkGoogleConnection])
+
+  // Debounced sync to Google Drive
+  const debouncedGoogleSync = useCallback((data) => {
+    pendingDataRef.current = data
+
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current)
+    }
+
+    syncTimerRef.current = setTimeout(() => {
+      if (pendingDataRef.current) {
+        performGoogleSync(pendingDataRef.current)
+        pendingDataRef.current = null
+      }
+    }, SYNC_DEBOUNCE_MS)
+  }, [performGoogleSync])
+
+  // Cleanup sync timer on unmount
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Save data whenever it changes (auto-save to localStorage + optional Google Drive)
   useEffect(() => {
     if (state.isLoaded) {
       const { isLoaded, ...dataToSave } = state
+      
+      // Always save to localStorage
       saveData(dataToSave)
+      
+      // Auto-sync to Google Drive if enabled and connected
+      if (state.settings?.autoSyncEnabled && checkGoogleConnection()) {
+        debouncedGoogleSync(dataToSave)
+      }
     }
-  }, [state])
+  }, [state, checkGoogleConnection, debouncedGoogleSync])
 
   const actions = {
     dispatch,
@@ -181,7 +252,7 @@ export function MoneyProvider({ children }) {
   }
 
   return (
-    <MoneyContext.Provider value={{ state, ...actions }}>
+    <MoneyContext.Provider value={{ state, syncStatus, ...actions }}>
       {children}
     </MoneyContext.Provider>
   )

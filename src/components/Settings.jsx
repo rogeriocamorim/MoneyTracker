@@ -31,7 +31,7 @@ import {
 } from '../utils/googleDrive'
 
 export default function Settings() {
-  const { state, dispatch } = useMoney()
+  const { state, syncStatus, dispatch, updateSettings } = useMoney()
   const fileInputRef = useRef(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
@@ -90,6 +90,10 @@ export default function Settings() {
     signOut()
     setGoogleConnected(false)
     setBackupInfo(null)
+    // Disable auto-sync when disconnecting
+    if (state.settings?.autoSyncEnabled) {
+      updateSettings({ autoSyncEnabled: false })
+    }
     toast.success('Disconnected from Google Drive')
   }
 
@@ -344,15 +348,57 @@ export default function Settings() {
         ) : (
           // Connected - show sync options
           <div className="space-y-3">
-            {backupInfo && (
+            {/* Auto-sync toggle */}
+            <div className="p-3 rounded-xl bg-[var(--color-bg-muted)] flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-[13px] font-medium text-[var(--color-text-primary)]">Auto-sync</p>
+                <p className="text-[12px] text-[var(--color-text-muted)]">
+                  Automatically sync changes to Google Drive
+                </p>
+              </div>
+              <button
+                onClick={() => updateSettings({ autoSyncEnabled: !state.settings?.autoSyncEnabled })}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  state.settings?.autoSyncEnabled 
+                    ? 'bg-[var(--color-accent)]' 
+                    : 'bg-[var(--color-border)]'
+                }`}
+              >
+                <span 
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                    state.settings?.autoSyncEnabled ? 'left-6' : 'left-1'
+                  }`} 
+                />
+              </button>
+            </div>
+
+            {/* Sync status */}
+            {(syncStatus.isSyncing || syncStatus.lastSyncTime || backupInfo) && (
               <div className="p-3 rounded-xl bg-[var(--color-bg-muted)] flex items-center justify-between">
                 <div>
-                  <p className="text-[12px] text-[var(--color-text-muted)]">Last backup</p>
+                  <p className="text-[12px] text-[var(--color-text-muted)]">
+                    {syncStatus.isSyncing ? 'Syncing...' : 'Last synced'}
+                  </p>
                   <p className="text-[13px] text-[var(--color-text-secondary)] font-medium">
-                    {new Date(backupInfo.modifiedTime).toLocaleString()}
+                    {syncStatus.isSyncing ? (
+                      <span className="flex items-center gap-2">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        Saving to Google Drive...
+                      </span>
+                    ) : syncStatus.lastSyncTime ? (
+                      new Date(syncStatus.lastSyncTime).toLocaleString()
+                    ) : backupInfo ? (
+                      new Date(backupInfo.modifiedTime).toLocaleString()
+                    ) : (
+                      'Never'
+                    )}
                   </p>
                 </div>
-                <Cloud className="w-5 h-5 text-[var(--color-text-muted)]" />
+                {syncStatus.isSyncing ? (
+                  <Loader2 className="w-5 h-5 text-[var(--color-accent)] animate-spin" />
+                ) : (
+                  <Cloud className="w-5 h-5 text-[var(--color-text-muted)]" />
+                )}
               </div>
             )}
             
