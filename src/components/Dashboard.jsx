@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -40,6 +40,7 @@ import {
   filterByDateRange,
   getPeriodLabel
 } from '../utils/calculations'
+import CategoryExpensesModal from './CategoryExpensesModal'
 
 const periods = [
   { id: 'this_month', label: 'This Month' },
@@ -218,6 +219,7 @@ export default function Dashboard() {
   const { state } = useMoney()
   const [selectedPeriod, setSelectedPeriod] = useState('this_month')
   const [customRange, setCustomRange] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState(null)
 
   // Get date range for selected period
   const dateRange = useMemo(() => {
@@ -457,7 +459,11 @@ export default function Dashboard() {
               const Icon = LucideIcons[cat.icon] || Tag
               const percentage = totalExpenses > 0 ? Math.round((cat.value / totalExpenses) * 100) : 0
               return (
-                <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors">
+                <div 
+                  key={cat.id} 
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+                  onClick={() => setSelectedCategory(cat)}
+                >
                   <div 
                     className="w-10 h-10 rounded-xl flex items-center justify-center"
                     style={{ backgroundColor: `${cat.color}20` }}
@@ -528,6 +534,17 @@ export default function Dashboard() {
           )}
         </div>
       </motion.div>
+
+      {/* Category Expenses Modal */}
+      <AnimatePresence>
+        {selectedCategory && (
+          <CategoryExpensesModal
+            category={selectedCategory}
+            expenses={filteredExpenses}
+            onClose={() => setSelectedCategory(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
