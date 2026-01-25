@@ -485,7 +485,11 @@ export default function Dashboard() {
         </h3>
         <div className="space-y-1">
           {[...filteredExpenses, ...filteredIncome.map(i => ({ ...i, isIncome: true }))]
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .sort((a, b) => {
+              const dateCompare = new Date(b.date) - new Date(a.date)
+              if (dateCompare !== 0) return dateCompare
+              return (b.createdAt || 0) - (a.createdAt || 0)
+            })
             .slice(0, 5)
             .map(tx => {
               const isIncome = tx.isIncome

@@ -36,7 +36,7 @@ function reducer(state, action) {
     case 'ADD_EXPENSE':
       return {
         ...state,
-        expenses: [...state.expenses, { ...action.payload, id: uuidv4() }],
+        expenses: [...state.expenses, { ...action.payload, id: uuidv4(), createdAt: Date.now() }],
       }
     
     case 'UPDATE_EXPENSE':

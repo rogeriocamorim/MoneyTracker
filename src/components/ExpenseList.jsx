@@ -58,7 +58,12 @@ export default function ExpenseList() {
     }
     if (filterCategory) expenses = expenses.filter(e => e.category === filterCategory)
     if (filterPayment) expenses = expenses.filter(e => e.paymentMethod === filterPayment)
-    return expenses.sort((a, b) => new Date(b.date) - new Date(a.date))
+    return expenses.sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date)
+      if (dateCompare !== 0) return dateCompare
+      // Same date: sort by createdAt descending (most recently added first)
+      return (b.createdAt || 0) - (a.createdAt || 0)
+    })
   }, [state.expenses, state.customCategories, searchTerm, filterCategory, filterPayment, selectedMonth])
 
   const totalExpenses = getTotal(filteredExpenses)
