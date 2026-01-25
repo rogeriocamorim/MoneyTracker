@@ -10,8 +10,10 @@ import {
   ArrowDownRight,
   Calendar,
   ChevronDown,
-  X
+  X,
+  Tag
 } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -34,7 +36,6 @@ import {
   getTotal,
   getTotalByCategory,
   getCombinedTrend,
-  getBudgetProgress,
   getDateRangeForPeriod,
   filterByDateRange,
   getPeriodLabel
@@ -277,7 +278,7 @@ export default function Dashboard() {
   const categoryTotals = useMemo(() => {
     const totals = getTotalByCategory(filteredExpenses)
     return allCategories
-      .map(cat => ({ name: cat.name, value: totals[cat.id] || 0, color: cat.color, id: cat.id }))
+      .map(cat => ({ name: cat.name, value: totals[cat.id] || 0, color: cat.color, id: cat.id, icon: cat.icon }))
       .filter(cat => cat.value > 0)
       .sort((a, b) => b.value - a.value)
   }, [filteredExpenses, allCategories])
@@ -308,15 +309,6 @@ export default function Dashboard() {
   }, [selectedPeriod, customRange])
 
   const trendData = useMemo(() => getCombinedTrend(state.expenses, state.income, trendMonths), [state.expenses, state.income, trendMonths])
-
-  const budgetChartData = useMemo(() => {
-    const progress = getBudgetProgress(filteredExpenses, state.budgets)
-    return progress
-      .filter(b => b.budget > 0)
-      .sort((a, b) => b.percentage - a.percentage)
-      .slice(0, 5)
-      .map(item => ({ ...item, name: getCategoryById(item.category, state.customCategories)?.name || item.category }))
-  }, [filteredExpenses, state.budgets, state.customCategories])
 
   const periodLabel = getPeriodLabel(selectedPeriod, customRange)
 
@@ -442,38 +434,56 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Budget Progress */}
+      {/* Category Spending */}
       <motion.div variants={item} className="card">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">
-            Budget Progress
+            Spending by Category
           </h3>
-          {selectedPeriod !== 'this_month' && (
-            <span className="text-[12px] text-[var(--color-text-muted)]">
-              Based on spending in selected period
-            </span>
-          )}
+          <span className="text-[12px] text-[var(--color-text-muted)]">
+            {categoryTotals.length} {categoryTotals.length === 1 ? 'category' : 'categories'}
+          </span>
         </div>
-        {budgetChartData.length === 0 ? (
+        {categoryTotals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-muted)] flex items-center justify-center mb-4">
-              <Target className="w-8 h-8 text-[var(--color-text-muted)]" />
+              <Tag className="w-8 h-8 text-[var(--color-text-muted)]" />
             </div>
-            <p className="text-[var(--color-text-muted)]">No budgets set yet</p>
+            <p className="text-[var(--color-text-muted)]">No expenses in this period</p>
           </div>
         ) : (
-          <div style={{ width: '100%', height: 280 }}>
-            <ResponsiveContainer>
-              <BarChart data={budgetChartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-                <XAxis type="number" stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} tickFormatter={v => `$${v}`} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} width={100} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: 16 }} />
-                <Bar dataKey="budget" name="Budget" fill="var(--color-bg-hover)" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="spent" name="Spent" fill="var(--color-accent)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="space-y-1 max-h-[320px] overflow-y-auto">
+            {categoryTotals.map(cat => {
+              const Icon = LucideIcons[cat.icon] || Tag
+              const percentage = totalExpenses > 0 ? Math.round((cat.value / totalExpenses) * 100) : 0
+              return (
+                <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--color-bg-hover)] transition-colors">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: `${cat.color}20` }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color: cat.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[14px] font-medium text-[var(--color-text-primary)] truncate">{cat.name}</p>
+                      <p className="font-mono font-semibold text-[var(--color-danger)]">
+                        {formatCurrency(cat.value)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-[var(--color-bg-muted)] overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${percentage}%`, backgroundColor: cat.color }}
+                        />
+                      </div>
+                      <span className="text-[11px] text-[var(--color-text-muted)] w-8 text-right">{percentage}%</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </motion.div>
