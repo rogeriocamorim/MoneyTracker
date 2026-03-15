@@ -4,7 +4,7 @@ import {
   X, FileUp, Upload, FileSpreadsheet, Check, AlertTriangle,
   ArrowRight, ArrowLeft, Loader2, CheckCircle2, XCircle,
   CreditCard, Landmark, ArrowDownCircle, ArrowUpCircle,
-  CheckSquare, Square, MinusSquare
+  CheckSquare, Square, MinusSquare, Calendar
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
@@ -132,14 +132,35 @@ function UploadStep({ onFileProcessed, isProcessing, setIsProcessing }) {
 
 // ─── Step 2: Review & Classify ──────────────────────────────────────────────
 
-function ReviewStep({ transactions, duplicateIndices, statementType, allCategories, onUpdateTransaction, onToggleSelected, onSelectAll, onDeselectDuplicates }) {
-  const selectedCount = transactions.filter(t => t.selected).length
-  const totalCount = transactions.length
-  const duplicateCount = duplicateIndices.size
+function ReviewStep({ transactions, duplicateIndices, statementType, allCategories, dateFrom, dateTo, onDateFromChange, onDateToChange, onUpdateTransaction, onToggleSelected, onSelectAll, onDeselectDuplicates }) {
+  // Compute min/max dates from all transactions for input bounds
+  const { minDate, maxDate } = useMemo(() => {
+    const dates = transactions.map(t => t.date).filter(Boolean).sort()
+    return { minDate: dates[0] || '', maxDate: dates[dates.length - 1] || '' }
+  }, [transactions])
 
-  const allSelected = selectedCount === totalCount
-  const noneSelected = selectedCount === 0
-  const someSelected = !allSelected && !noneSelected
+  // Filter transactions by date range
+  const filteredEntries = useMemo(() => {
+    return transactions.map((t, idx) => ({ transaction: t, originalIndex: idx }))
+      .filter(({ transaction }) => {
+        if (dateFrom && transaction.date < dateFrom) return false
+        if (dateTo && transaction.date > dateTo) return false
+        return true
+      })
+  }, [transactions, dateFrom, dateTo])
+
+  // Map duplicate indices to filtered set
+  const filteredDuplicateCount = useMemo(() => {
+    return filteredEntries.filter(({ originalIndex }) => duplicateIndices.has(originalIndex)).length
+  }, [filteredEntries, duplicateIndices])
+
+  const filteredTotal = filteredEntries.length
+  const filteredSelectedCount = filteredEntries.filter(({ transaction }) => transaction.selected).length
+  const totalCount = transactions.length
+
+  const allFilteredSelected = filteredTotal > 0 && filteredSelectedCount === filteredTotal
+  const noneFilteredSelected = filteredSelectedCount === 0
+  const someFilteredSelected = !allFilteredSelected && !noneFilteredSelected
 
   return (
     <div className="flex flex-col" style={{ maxHeight: '70vh' }}>
@@ -153,28 +174,55 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
             {statementType.label}
           </div>
           <span className="text-[13px] text-[var(--color-text-muted)]">
-            {totalCount} transactions found
+            {filteredTotal === totalCount
+              ? `${totalCount} transactions`
+              : `${filteredTotal} of ${totalCount} transactions`}
           </span>
-          {duplicateCount > 0 && (
+          {filteredDuplicateCount > 0 && (
             <span className="text-[12px] text-amber-500 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
-              {duplicateCount} possible duplicates
+              {filteredDuplicateCount} possible duplicates
             </span>
           )}
+        </div>
+
+        {/* Date range filter */}
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)]">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Date range:</span>
+          </div>
+          <input
+            type="date"
+            className="input text-[12px] py-1 px-2"
+            value={dateFrom}
+            min={minDate}
+            max={dateTo || maxDate}
+            onChange={(e) => onDateFromChange(e.target.value)}
+          />
+          <span className="text-[12px] text-[var(--color-text-muted)]">to</span>
+          <input
+            type="date"
+            className="input text-[12px] py-1 px-2"
+            value={dateTo}
+            min={dateFrom || minDate}
+            max={maxDate}
+            onChange={(e) => onDateToChange(e.target.value)}
+          />
         </div>
 
         {/* Bulk actions */}
         <div className="flex items-center gap-3 pb-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
           <button
-            onClick={onSelectAll}
+            onClick={() => onSelectAll(filteredEntries.map(e => e.originalIndex))}
             className="flex items-center gap-1.5 text-[12px] text-[var(--color-accent)] hover:underline"
           >
-            {allSelected ? <CheckSquare className="w-3.5 h-3.5" /> : someSelected ? <MinusSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-            {allSelected ? 'Deselect All' : 'Select All'}
+            {allFilteredSelected ? <CheckSquare className="w-3.5 h-3.5" /> : someFilteredSelected ? <MinusSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+            {allFilteredSelected ? 'Deselect All' : 'Select All'}
           </button>
-          {duplicateCount > 0 && (
+          {filteredDuplicateCount > 0 && (
             <button
-              onClick={onDeselectDuplicates}
+              onClick={() => onDeselectDuplicates(filteredEntries.map(e => e.originalIndex))}
               className="flex items-center gap-1.5 text-[12px] text-amber-500 hover:underline"
             >
               <XCircle className="w-3.5 h-3.5" />
@@ -182,24 +230,29 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
             </button>
           )}
           <span className="text-[12px] text-[var(--color-text-muted)] ml-auto">
-            {selectedCount} of {totalCount} selected
+            {filteredSelectedCount} of {filteredTotal} selected
           </span>
         </div>
       </div>
 
       {/* Transaction list */}
       <div className="flex-1 overflow-y-auto p-4 pt-2 space-y-2">
-        {transactions.map((t, idx) => (
+        {filteredEntries.map(({ transaction, originalIndex }) => (
           <TransactionRow
-            key={idx}
-            transaction={t}
-            index={idx}
-            isDuplicate={duplicateIndices.has(idx)}
+            key={originalIndex}
+            transaction={transaction}
+            index={originalIndex}
+            isDuplicate={duplicateIndices.has(originalIndex)}
             allCategories={allCategories}
-            onToggleSelected={() => onToggleSelected(idx)}
-            onUpdate={(field, value) => onUpdateTransaction(idx, field, value)}
+            onToggleSelected={() => onToggleSelected(originalIndex)}
+            onUpdate={(field, value) => onUpdateTransaction(originalIndex, field, value)}
           />
         ))}
+        {filteredTotal === 0 && (
+          <div className="text-center py-8">
+            <p className="text-[13px] text-[var(--color-text-muted)]">No transactions in this date range</p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -309,8 +362,13 @@ function TransactionRow({ transaction, index, isDuplicate, allCategories, onTogg
 
 // ─── Step 3: Confirm ────────────────────────────────────────────────────────
 
-function ConfirmStep({ transactions, statementType }) {
-  const selected = transactions.filter(t => t.selected)
+function ConfirmStep({ transactions, statementType, dateFrom, dateTo }) {
+  const selected = transactions.filter(t => {
+    if (!t.selected) return false
+    if (dateFrom && t.date < dateFrom) return false
+    if (dateTo && t.date > dateTo) return false
+    return true
+  })
   const expenses = selected.filter(t => t.type === 'debit')
   const income = selected.filter(t => t.type === 'credit')
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0)
@@ -385,6 +443,8 @@ export default function StatementImport({ onClose }) {
   const [statementType, setStatementType] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [duplicateIndices, setDuplicateIndices] = useState(new Set())
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   // Handle parsed PDF result
   const handleFileProcessed = useCallback((result, name) => {
@@ -394,6 +454,13 @@ export default function StatementImport({ onClose }) {
     // Find duplicates
     const dupes = findDuplicates(result.transactions, state.expenses, state.income)
     setDuplicateIndices(dupes)
+
+    // Compute date range from transactions
+    const dates = result.transactions.map(t => t.date).sort()
+    if (dates.length > 0) {
+      setDateFrom(dates[0])
+      setDateTo(dates[dates.length - 1])
+    }
 
     // Prepare transactions with UI state
     const prepared = result.transactions.map((t, idx) => ({
@@ -433,23 +500,32 @@ export default function StatementImport({ onClose }) {
     ))
   }, [])
 
-  // Select/Deselect all
-  const handleSelectAll = useCallback(() => {
-    const allSelected = transactions.every(t => t.selected)
-    setTransactions(prev => prev.map(t => ({ ...t, selected: !allSelected })))
+  // Select/Deselect all (scoped to provided indices)
+  const handleSelectAll = useCallback((indices) => {
+    const targetSet = new Set(indices)
+    const allSelected = indices.every(i => transactions[i]?.selected)
+    setTransactions(prev => prev.map((t, i) =>
+      targetSet.has(i) ? { ...t, selected: !allSelected } : t
+    ))
   }, [transactions])
 
-  // Deselect duplicates
-  const handleDeselectDuplicates = useCallback(() => {
+  // Deselect duplicates (scoped to provided indices)
+  const handleDeselectDuplicates = useCallback((indices) => {
+    const targetSet = new Set(indices)
     setTransactions(prev => prev.map((t, i) => ({
       ...t,
-      selected: duplicateIndices.has(i) ? false : t.selected,
+      selected: (targetSet.has(i) && duplicateIndices.has(i)) ? false : t.selected,
     })))
   }, [duplicateIndices])
 
-  // Import the selected transactions
+  // Import the selected transactions (filtered by date range)
   const handleImport = useCallback(() => {
-    const selected = transactions.filter(t => t.selected)
+    const selected = transactions.filter(t => {
+      if (!t.selected) return false
+      if (dateFrom && t.date < dateFrom) return false
+      if (dateTo && t.date > dateTo) return false
+      return true
+    })
 
     const expenses = selected
       .filter(t => t.type === 'debit')
@@ -479,9 +555,16 @@ export default function StatementImport({ onClose }) {
 
     toast.success(`Imported ${parts.join(' and ')}`)
     onClose()
-  }, [transactions, bulkAddExpenses, bulkAddIncome, onClose])
+  }, [transactions, dateFrom, dateTo, bulkAddExpenses, bulkAddIncome, onClose])
 
-  const selectedCount = transactions.filter(t => t.selected).length
+  const selectedCount = useMemo(() => {
+    return transactions.filter(t => {
+      if (!t.selected) return false
+      if (dateFrom && t.date < dateFrom) return false
+      if (dateTo && t.date > dateTo) return false
+      return true
+    }).length
+  }, [transactions, dateFrom, dateTo])
 
   return (
     <AnimatePresence>
@@ -542,6 +625,10 @@ export default function StatementImport({ onClose }) {
                 duplicateIndices={duplicateIndices}
                 statementType={statementType}
                 allCategories={allCategories}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onDateFromChange={setDateFrom}
+                onDateToChange={setDateTo}
                 onUpdateTransaction={handleUpdateTransaction}
                 onToggleSelected={handleToggleSelected}
                 onSelectAll={handleSelectAll}
@@ -552,6 +639,8 @@ export default function StatementImport({ onClose }) {
               <ConfirmStep
                 transactions={transactions}
                 statementType={statementType}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
               />
             )}
           </div>
