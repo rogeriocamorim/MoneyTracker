@@ -489,75 +489,137 @@ function extractAmountsWithPositions(items, columns, target) {
 // ─── CIBC Credit Card parser ────────────────────────────────────────────────
 
 /**
- * Parse a CIBC date string like "Jan 02" or "Jan. 02" into "yyyy-MM-dd".
+ * Parse a CIBC credit card date string like "Mar 4, 2026" into "yyyy-MM-dd".
+ * Handles formats: "Mar 4, 2026", "Mar 04, 2026", "Mar 4,2026"
+ * Falls back to provided year if year not in string.
  */
-function parseCIBCDate(dateStr, year) {
-  const match = dateStr.match(/([A-Za-z]{3})\.?\s+(\d{1,2})/)
+function parseCIBCCreditCardDate(dateStr, fallbackYear) {
+  const match = dateStr.match(/([A-Za-z]{3})\.?\s+(\d{1,2}),?\s*(\d{4})?/)
   if (!match) return null
   const month = MONTH_MAP[match[1].toLowerCase()]
   if (!month) return null
   const day = match[2].padStart(2, '0')
+  const year = match[3] || fallbackYear
   return `${year}-${month}-${day}`
 }
 
 function parseCIBCCreditCardTransactions(pages, year) {
   const transactions = []
 
+  // Regex for credit card date at start of line: "Mar 4, 2026" or "Feb 26, 2026"
+  const CC_DATE_RE = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s*(\d{4})/i
+
+  // Regex for dollar amount: "$43.33" or "−$192.60" or "-$500.00"
+  // U+2212 (−) is the minus sign used by CIBC for credits
+  const CC_AMOUNT_RE = /[\u2212-]?\$[\d,]+\.\d{2}\s*$/
+
+  // Lines to skip entirely
+  const SKIP_PATTERNS = [
+    /^\d{4}\*{4,}\d{4}/,                     // Card number: 4502********0171
+    /^Credit$/i,                               // "Credit" suffix line
+    /^CHECK INSTALLMENT ELIGIBILITY/i,         // Interstitial CTA
+    /^https?:\/\//i,                           // URLs
+    /^\d{1,2}\/\d{1,2}\/\d{2},\s+\d{1,2}:\d{2}/,  // Page header timestamp: "3/15/26, 8:44 AM"
+    /^Credit Card Details/i,                   // Page header title
+    /^USD\s+@/i,                               // Foreign currency conversion line
+    /^TRANSACTION\s+DATE/i,                    // Column header
+    /^PAST\s+TRANSACTIONS/i,                   // Section header
+    /^Custom\s+search/i,                       // Filter controls
+    /^View:/i,                                 // View filter
+    /^All\s+Pending\s+Posted/i,               // Filter tabs
+    /^The icons indicate/i,                    // Footer legend start
+    /^To view the transaction/i,              // Footer legend
+    /^Personal\s+&\s+Household/i,             // Footer category
+    /^Retail\s+and\s+Grocery/i,               // Footer category
+    /^Hotels,\s+Entertainment/i,              // Footer category
+    /^Home\s+&\s+Office/i,                    // Footer category
+    /^Cash\s+Advances/i,                      // Footer category
+    /^Other\s+Transactions/i,                 // Footer category
+    /^Professional\s+and\s+Financial/i,       // Footer category
+    /^Transportation$/i,                       // Footer category
+    /^Restaurants$/i,                          // Footer category
+    /^Health\s+&\s+Education/i,               // Footer category
+    /^Foreign\s+Currency/i,                   // Footer category
+    /^Credit Card eStatement/i,               // Footer link
+    /^Transaction\s+Glossary/i,               // Glossary link
+    /^Questions\s+about/i,                    // Help text
+  ]
+
+  function shouldSkip(text) {
+    return SKIP_PATTERNS.some(p => p.test(text))
+  }
+
   for (const pageItems of pages) {
     const lines = reconstructLines(pageItems)
 
-    for (const line of lines) {
-      const text = line.text
+    for (let i = 0; i < lines.length; i++) {
+      const text = lines[i].text.trim()
 
-      // CIBC Credit Card format:
-      // Transaction Date / Posting Date / Description / Amount
-      // Example: "Jan 02 Jan 03 AMAZON.CA 45.67"
-      // or: "Jan 02 Jan 04 PAYMENT - THANK YOU -500.00"
+      if (!text || shouldSkip(text)) continue
 
-      // Try to match line starting with a date, possibly followed by another date
-      const dateMatch = text.match(/^([A-Za-z]{3})\.?\s+(\d{1,2})\s+/)
+      // Try to match a date at the start of the line
+      const dateMatch = text.match(CC_DATE_RE)
       if (!dateMatch) continue
 
-      const date = parseCIBCDate(dateMatch[0], year)
+      const date = parseCIBCCreditCardDate(dateMatch[0], year)
       if (!date) continue
 
+      // Get the rest after the date
       let rest = text.slice(dateMatch[0].length).trim()
 
-      // Check for a second date (posting date) - skip it
-      const postingDateMatch = rest.match(/^([A-Za-z]{3})\.?\s+(\d{1,2})\s+/)
-      if (postingDateMatch) {
-        rest = rest.slice(postingDateMatch[0].length).trim()
+      // Try to find amount at end of line
+      const amountMatch = rest.match(CC_AMOUNT_RE)
+
+      if (amountMatch) {
+        // Amount found on same line as date
+        const amountStr = amountMatch[0].trim()
+        let description = rest.slice(0, amountMatch.index).trim().replace(/\s+/g, ' ')
+
+        if (!description) {
+          // Format: "Feb 25, 2026  $123.44" with description on NEXT line
+          // (This happens with CHECK INSTALLMENT ELIGIBILITY items)
+          // Look ahead for description on next line(s)
+          let descLine = ''
+          let j = i + 1
+          while (j < lines.length) {
+            const nextText = lines[j].text.trim()
+            // Stop if we hit a skip pattern, a new date line, or a card number
+            if (!nextText || shouldSkip(nextText) || CC_DATE_RE.test(nextText) || /^\d{4}\*{4,}\d{4}/.test(nextText)) break
+            descLine = nextText
+            break
+          }
+          description = descLine.replace(/\s+/g, ' ')
+        }
+
+        if (!description) continue
+
+        // Parse amount — handle unicode minus (U+2212) and regular minus
+        const cleanAmount = amountStr.replace(/[\u2212]/g, '-')
+        const amount = parseAmount(cleanAmount)
+        if (amount === null || amount === 0) continue
+
+        // Skip non-transaction lines (balances, limits, etc.)
+        const lowerDesc = description.toLowerCase()
+        if (lowerDesc.includes('previous balance') || lowerDesc.includes('new balance') ||
+            lowerDesc.includes('credit limit') || lowerDesc.includes('minimum payment') ||
+            lowerDesc.includes('amount due') || lowerDesc.includes('current balance') ||
+            lowerDesc.includes('credit available') || lowerDesc.includes('pending:') ||
+            lowerDesc.includes('last payment amount') || lowerDesc.includes('page ') ||
+            lowerDesc.includes('statement date')) {
+          continue
+        }
+
+        // Determine if credit (payment/refund) or debit (purchase)
+        const isCredit = amount < 0 || lowerDesc.includes('payment') || lowerDesc.includes('refund')
+
+        transactions.push({
+          date,
+          description,
+          amount: Math.abs(amount),
+          type: isCredit ? 'credit' : 'debit',
+        })
       }
-
-      // Find amount at end of line (may be negative for payments/credits)
-      const amountMatch = rest.match(/-?[\d,]+\.\d{2}\s*$/)
-      if (!amountMatch) continue
-
-      const amount = parseAmount(amountMatch[0])
-      if (amount === null || amount === 0) continue
-
-      const description = rest.slice(0, amountMatch.index).trim().replace(/\s+/g, ' ')
-      if (!description) continue
-
-      // Skip headers/footers
-      const lowerDesc = description.toLowerCase()
-      if (lowerDesc.includes('previous balance') || lowerDesc.includes('new balance') ||
-          lowerDesc.includes('total') || lowerDesc.includes('credit limit') ||
-          lowerDesc.includes('minimum payment') || lowerDesc.includes('statement') ||
-          lowerDesc.includes('page ')) {
-        continue
-      }
-
-      // For credit cards: positive = purchase (debit), negative = payment/refund (credit)
-      // Also check description for payment keywords
-      const isPayment = amount < 0 || lowerDesc.includes('payment') || lowerDesc.includes('refund')
-
-      transactions.push({
-        date,
-        description,
-        amount: Math.abs(amount),
-        type: isPayment ? 'credit' : 'debit',
-      })
+      // If no amount on this line, it's likely a header/non-transaction line — skip
     }
   }
 
