@@ -275,17 +275,24 @@ describe('Dashboard interactions', () => {
     })
 
     // In the "Spending by Category" detailed list, click "Food & Groceries"
+    // Category name now appears in both Recent Activity and Spending by Category,
+    // so we target the one inside the spending breakdown section (has cursor-pointer)
     const categoryItems = screen.getAllByText('Food & Groceries')
-    // Click the one in the detailed list (last one since first might be in pie chart legend)
-    await user.click(categoryItems[categoryItems.length - 1])
+    // Find the one that is inside a clickable spending category row (cursor-pointer parent)
+    const spendingCategoryItem = categoryItems.find(el => el.closest('[class*="cursor-pointer"]'))
+    await user.click(spendingCategoryItem)
 
     // CategoryExpensesModal should appear with category heading and expense count
     expect(screen.getByText('2 expenses')).toBeInTheDocument()
-    // Descriptions may appear in both Recent Activity and the modal, so use getAllByText
+    // Category name now appears as primary label in each row + in the modal header
+    // Descriptions appear as secondary text below the category name
     const groceryEls = screen.getAllByText('Grocery run')
     expect(groceryEls.length).toBeGreaterThanOrEqual(1)
     const costcoEls = screen.getAllByText('Costco trip')
     expect(costcoEls.length).toBeGreaterThanOrEqual(1)
+    // Category name should appear multiple times (header + each expense row)
+    const foodEls = screen.getAllByText('Food & Groceries')
+    expect(foodEls.length).toBeGreaterThanOrEqual(3) // header + 2 expense rows
   })
 })
 
@@ -311,10 +318,12 @@ describe('CategoryExpensesModal', () => {
       <CategoryExpensesModal category={category} expenses={expenses} onClose={onClose} />
     )
 
-    // Should show the category name
-    expect(screen.getByText('Food & Groceries')).toBeInTheDocument()
+    // Category name now appears in both the modal header and each expense row
+    const foodEls = screen.getAllByText('Food & Groceries')
+    expect(foodEls.length).toBeGreaterThanOrEqual(2) // header + expense row
     // Should show only food expenses (1 expense)
     expect(screen.getByText('1 expense')).toBeInTheDocument()
+    // Description appears as secondary text below the category name
     expect(screen.getByText('Groceries')).toBeInTheDocument()
     // Transport expense should not be visible
     expect(screen.queryByText('Gas')).not.toBeInTheDocument()

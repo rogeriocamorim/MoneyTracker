@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Download, 
   Upload, 
@@ -13,11 +13,13 @@ import {
   RefreshCw,
   Settings as SettingsIcon,
   ExternalLink,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { exportData, importData } from '../utils/storage'
+import { APP_VERSION, CHANGELOG } from '../data/version'
 import { 
   initGoogleApi, 
   isSignedIn, 
@@ -29,6 +31,72 @@ import {
   setClientId,
   hasClientId
 } from '../utils/googleDrive'
+
+function ChangelogSection() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full text-left group"
+      >
+        <span className="text-[13px] font-medium text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
+          Changelog
+        </span>
+        <motion.span
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-4 h-4 text-[var(--color-text-muted)]" />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 space-y-4 max-h-[400px] overflow-y-auto pr-1">
+              {CHANGELOG.map((release, i) => (
+                <div key={release.version}>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-[13px] font-semibold ${i === 0 ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-primary)]'}`}>
+                      v{release.version}
+                    </span>
+                    <span className="text-[11px] text-[var(--color-text-muted)]">
+                      {release.date}
+                    </span>
+                    {i === 0 && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[var(--color-accent)] text-white leading-none">
+                        Latest
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[12px] font-medium text-[var(--color-text-secondary)] mt-1">
+                    {release.title}
+                  </p>
+                  <ul className="mt-1.5 space-y-1">
+                    {release.changes.map((change, j) => (
+                      <li key={j} className="text-[12px] text-[var(--color-text-muted)] flex gap-2">
+                        <span className="text-[var(--color-text-muted)] mt-0.5 shrink-0">-</span>
+                        {change}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
 
 export default function Settings() {
   const { state, syncStatus, dispatch, updateSettings } = useMoney()
@@ -476,12 +544,21 @@ export default function Settings() {
       <div className="card">
         <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-3">About</h3>
         <p className="text-[13px] text-[var(--color-text-muted)] leading-relaxed">
-          MoneyTracker is a personal finance app that helps you track your expenses and income. 
+          MoneyTracker is a personal finance app that helps you track expenses, income, and budgets.
+          Import bank statements, scan receipts, sync with Google Drive, and compare spending across months.
           All data is stored locally in your browser - no data is sent to any server.
         </p>
         <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
-          <p className="text-[12px] text-[var(--color-text-muted)]">Version 1.0.0</p>
+          <p className="text-[14px] font-semibold text-[var(--color-text-primary)]">
+            Version {APP_VERSION}
+          </p>
+          <p className="text-[12px] text-[var(--color-text-muted)] mt-0.5">
+            {CHANGELOG[0]?.title}
+          </p>
         </div>
+
+        {/* Changelog */}
+        <ChangelogSection />
       </div>
     </motion.div>
   )
