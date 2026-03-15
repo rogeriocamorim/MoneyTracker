@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import StatementImport from '../StatementImport'
+
+const StatementImport = lazy(() => import('../StatementImport'))
 
 const SIDEBAR_WIDTH = 280
 
@@ -64,7 +65,9 @@ export default function Layout() {
       {/* Statement Import Modal */}
       <AnimatePresence>
         {showStatementImport && (
-          <StatementImport onClose={() => setShowStatementImport(false)} />
+          <Suspense fallback={null}>
+            <StatementImport onClose={() => setShowStatementImport(false)} />
+          </Suspense>
         )}
       </AnimatePresence>
     </div>

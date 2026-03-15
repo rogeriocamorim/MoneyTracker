@@ -9,7 +9,14 @@ import {
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { expenseCategories, incomeSources, getAllCategories } from '../data/categories'
-import { parseBankStatement, findDuplicates, autoCategorize } from '../utils/pdfParser'
+// Lazy-loaded: pdfParser imports pdfjs-dist (~1.2MB), so we load it on-demand
+let _pdfParser = null
+async function getPdfParser() {
+  if (!_pdfParser) {
+    _pdfParser = await import('../utils/pdfParser')
+  }
+  return _pdfParser
+}
 
 // ─── Step 1: Upload ─────────────────────────────────────────────────────────
 
@@ -30,6 +37,7 @@ function UploadStep({ onFileProcessed, isProcessing, setIsProcessing }) {
     setIsProcessing(true)
 
     try {
+      const { parseBankStatement } = await getPdfParser()
       const result = await parseBankStatement(file)
 
       if (result.transactions.length === 0) {
@@ -569,7 +577,9 @@ export default function StatementImport({ onClose }) {
   }, [step]) // Re-bind when step changes (focusable elements change)
 
   // Handle parsed PDF result
-  const handleFileProcessed = useCallback((result, name) => {
+  const handleFileProcessed = useCallback(async (result, name) => {
+    const { findDuplicates, autoCategorize } = await getPdfParser()
+
     setFileName(name)
     setStatementType(result.statementType)
 
@@ -597,7 +607,10 @@ export default function StatementImport({ onClose }) {
   }, [state.expenses, state.income])
 
   // Update a single transaction field
-  const handleUpdateTransaction = useCallback((index, field, value) => {
+  const handleUpdateTransaction = useCallback(async (index, field, value) => {
+    // autoCategorize is needed when switching type to debit
+    const { autoCategorize } = await getPdfParser()
+
     setTransactions(prev => prev.map((t, i) => {
       if (i !== index) return t
 
