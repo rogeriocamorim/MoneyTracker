@@ -1,6 +1,6 @@
 export const expenseCategories = [
   { id: 'food', name: 'Food & Groceries', icon: 'UtensilsCrossed', color: '#f97316' },
-  { id: 'transport', name: 'Transport', icon: 'Car', color: '#3b82f6' },
+  { id: 'transport', name: 'Transport', icon: 'Car', color: '#0891b2' },
   { id: 'utilities', name: 'Utilities', icon: 'Zap', color: '#eab308' },
   { id: 'entertainment', name: 'Entertainment', icon: 'Gamepad2', color: '#a855f7' },
   { id: 'shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#ec4899' },
@@ -13,22 +13,22 @@ export const expenseCategories = [
   { id: 'personal', name: 'Personal Care', icon: 'Sparkles', color: '#f472b6' },
   { id: 'gifts', name: 'Gifts & Donations', icon: 'Gift', color: '#22c55e' },
   { id: 'travel', name: 'Travel', icon: 'Plane', color: '#06b6d4' },
-  { id: 'other', name: 'Other', icon: 'MoreHorizontal', color: '#6b7280' },
+  { id: 'other', name: 'Other', icon: 'MoreHorizontal', color: '#94918b' },
 ]
 
 export const paymentMethods = [
-  { id: 'bank', name: 'Bank Account', icon: 'Landmark', color: '#3b82f6' },
-  { id: 'visa', name: 'Visa Credit Card', icon: 'CreditCard', color: '#1a1f71' },
-  { id: 'mastercard', name: 'MasterCard', icon: 'CreditCard', color: '#eb001b' },
+  { id: 'bank', name: 'Bank Account', icon: 'Landmark', color: '#6366f1' },
+  { id: 'visa', name: 'Visa Credit Card', icon: 'CreditCard', color: '#4f46e5' },
+  { id: 'mastercard', name: 'MasterCard', icon: 'CreditCard', color: '#e11d48' },
 ]
 
 export const incomeSources = [
   { id: 'daily_job', name: 'Daily Job', icon: 'Briefcase', color: '#10b981' },
   { id: 'business', name: 'Personal Business', icon: 'Building2', color: '#8b5cf6' },
   { id: 'wife_business', name: "Wife's Business", icon: 'Store', color: '#f472b6' },
-  { id: 'investments', name: 'Investments', icon: 'TrendingUp', color: '#3b82f6' },
+  { id: 'investments', name: 'Investments', icon: 'TrendingUp', color: '#6366f1' },
   { id: 'freelance', name: 'Freelance', icon: 'Laptop', color: '#f59e0b' },
-  { id: 'other', name: 'Other', icon: 'Wallet', color: '#6b7280' },
+  { id: 'other', name: 'Other', icon: 'Wallet', color: '#94918b' },
 ]
 
 // No default budgets - user sets these up during onboarding or manually
@@ -46,7 +46,7 @@ export const getCategoryById = (id, customCategories = []) => {
   
   // Return a fallback for unknown categories
   if (id) {
-    return { id, name: id.replace(/^custom_/, '').replace(/_/g, ' '), icon: 'Tag', color: '#6b7280' }
+    return { id, name: id.replace(/^custom_/, '').replace(/_/g, ' '), icon: 'Tag', color: '#94918b' }
   }
   
   return null

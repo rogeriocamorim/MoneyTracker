@@ -389,7 +389,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--color-accent)' }}>
                 <Receipt className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -475,11 +475,11 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/40 rounded-xl"
+                  className="p-4 border rounded-xl" style={{ backgroundColor: 'var(--color-success-muted)', borderColor: 'rgba(22, 163, 74, 0.3)' }}
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-500/30 flex items-center justify-center">
-                      <Smartphone className="w-5 h-5 text-green-400" />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-muted)' }}>
+                      <Smartphone className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
                     </div>
                     <div>
                       <p className="text-[var(--color-text-primary)] font-medium">Photo from Phone Ready!</p>
@@ -488,7 +488,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                   </div>
                   <button
                     onClick={loadPendingReceipt}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2" style={{ backgroundColor: 'var(--color-success)' }}
                   >
                     <Download className="w-4 h-4" />
                     Load Photo & Process
@@ -500,9 +500,9 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
               <div className="pt-4 border-t border-[var(--color-border)]">
                 <button
                   onClick={() => setShowQRCode(!showQRCode)}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-[var(--color-text-primary)] font-medium flex items-center justify-center gap-2 hover:from-purple-500/30 hover:to-pink-500/30 transition-all"
+                  className="w-full py-3 px-4 rounded-xl border text-[var(--color-text-primary)] font-medium flex items-center justify-center gap-2 transition-all hover:bg-[var(--color-bg-hover)]" style={{ backgroundColor: 'var(--color-accent-muted)', borderColor: 'rgba(99, 102, 241, 0.2)' }}
                 >
-                  <Smartphone className="w-5 h-5 text-purple-400" />
+                  <Smartphone className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
                   {showQRCode ? 'Hide QR Code' : '📱 Scan with Phone Instead'}
                 </button>
                 
@@ -513,7 +513,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-4 text-center"
                   >
-                    <div className="inline-block p-4 bg-white rounded-xl shadow-lg">
+                    <div className="inline-block p-4 bg-white rounded-xl" style={{ boxShadow: 'var(--shadow-lg)' }}>
                       <QRCodeSVG 
                         value={mobileUrl} 
                         size={180}
@@ -596,7 +596,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
               {extractedData && (
                 <div className="bg-[var(--color-bg-muted)] rounded-xl p-4 space-y-3">
                   <h3 className="font-medium text-[var(--color-text-primary)] flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" /> Extracted Data
+                    <Check className="w-4 h-4 text-[var(--color-success)]" /> Extracted Data
                   </h3>
                   
                   <div className="grid grid-cols-2 gap-3 text-[14px]">
@@ -627,7 +627,7 @@ export default function ReceiptScanner({ onExtracted, onClose }) {
                   </div>
 
                   {!extractedData.total && (
-                    <div className="flex items-center gap-2 text-[13px] text-amber-500">
+                    <div className="flex items-center gap-2 text-[13px] text-[var(--color-warning)]">
                       <AlertCircle className="w-4 h-4" />
                       Could not detect total. You can still use other data.
                     </div>

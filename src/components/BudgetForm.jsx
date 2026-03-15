@@ -7,7 +7,7 @@ import { expenseCategories, getCategoryById, getAllCategories } from '../data/ca
 
 // Generate a random color for custom categories
 const randomColor = () => {
-  const colors = ['#f97316', '#3b82f6', '#eab308', '#a855f7', '#ec4899', '#ef4444', '#14b8a6', '#22c55e', '#06b6d4', '#8b5cf6']
+  const colors = ['#f97316', '#6366f1', '#eab308', '#a855f7', '#ec4899', '#ef4444', '#14b8a6', '#22c55e', '#06b6d4', '#8b5cf6']
   return colors[Math.floor(Math.random() * colors.length)]
 }
 

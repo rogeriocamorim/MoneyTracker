@@ -119,7 +119,7 @@ export default function BudgetManager() {
               return (
                 <div key={item.category} className={`p-4 group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
                   <div className="flex items-center gap-4 mb-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#6b7280'}15` }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#94918b'}15` }}>
                       <CategoryIcon categoryId={item.category} customCategories={state.customCategories} />
                     </div>
                     <div className="flex-1 min-w-0">

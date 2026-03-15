@@ -30,7 +30,7 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
             onClick={onClose}
           />
         )}
@@ -38,11 +38,12 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
 
       {/* Sidebar */}
       <aside 
-        className="fixed left-0 top-0 h-full bg-[var(--color-bg-subtle)] border-r border-[var(--color-border)] flex flex-col z-50"
+        className="fixed left-0 top-0 h-full flex flex-col z-50"
         style={{ 
           width: `${width}px`,
           transform: `translateX(${isOpen ? '0' : '-100%'})`,
-          transition: 'transform 0.3s ease'
+          transition: 'transform 0.3s ease',
+          background: 'var(--sidebar-bg)',
         }}
       >
         <style>{`
@@ -55,30 +56,32 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div 
-              className="w-10 h-10 rounded-xl bg-[var(--color-accent)] flex items-center justify-center"
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
             >
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-semibold text-[15px] text-[var(--color-text-primary)]">MoneyTracker</h1>
-              <p className="text-[11px] text-[var(--color-text-muted)]">Personal Finance</p>
+              <h1 className="font-semibold text-[15px]" style={{ color: 'var(--sidebar-text-active)' }}>MoneyTracker</h1>
+              <p className="text-[11px]" style={{ color: 'var(--sidebar-text)' }}>Personal Finance</p>
             </div>
           </div>
           
           <button 
             onClick={onClose}
-            className="lg:hidden p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors"
+            className="lg:hidden p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--sidebar-text)' }}
           >
-            <X className="w-5 h-5 text-[var(--color-text-muted)]" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Divider */}
-        <div className="mx-4 h-px bg-[var(--color-border)]" />
+        <div className="mx-4 h-px" style={{ background: 'var(--sidebar-border)' }} />
 
         {/* Navigation */}
         <nav className="flex-1 p-4 overflow-y-auto">
-          <p className="px-3 py-2 text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider font-medium">
+          <p className="px-3 py-2 text-[11px] uppercase tracking-wider font-medium" style={{ color: 'var(--sidebar-text)' }}>
             Menu
           </p>
           <ul className="space-y-1 mt-2">
@@ -90,15 +93,16 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
                     if (window.innerWidth < 1024) onClose()
                   }}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 ${
-                      isActive
-                        ? 'bg-[var(--color-accent)] text-white'
-                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
-                    }`
+                    `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150`
                   }
+                  style={({ isActive }) => ({
+                    background: isActive ? 'var(--sidebar-active)' : 'transparent',
+                    color: isActive ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
+                    fontWeight: isActive ? 600 : 400,
+                  })}
                 >
                   <Icon className="w-5 h-5" strokeWidth={2} />
-                  <span className="font-medium text-[14px]">{label}</span>
+                  <span className="text-[14px]">{label}</span>
                 </NavLink>
               </li>
             ))}
@@ -106,10 +110,10 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[var(--color-border)]">
-          <div className="px-3 py-3 rounded-lg bg-[var(--color-bg-muted)]">
-            <p className="text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider">Storage</p>
-            <p className="text-[13px] text-[var(--color-text-secondary)] mt-1">Saved locally in browser</p>
+        <div className="p-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+          <div className="px-3 py-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <p className="text-[11px] uppercase tracking-wider" style={{ color: 'var(--sidebar-text)' }}>Storage</p>
+            <p className="text-[13px] mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>Saved locally in browser</p>
           </div>
         </div>
       </aside>

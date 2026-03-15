@@ -21,8 +21,8 @@ function PaymentBadge({ methodId }) {
   if (!method) return null
   
   const Icon = methodId === 'bank' ? Landmark : CreditCard
-  const bgColor = methodId === 'bank' ? '#3b82f620' : methodId === 'visa' ? '#1a1f7120' : '#eb001b20'
-  const textColor = methodId === 'bank' ? '#3b82f6' : methodId === 'visa' ? '#1a1f71' : '#eb001b'
+  const bgColor = methodId === 'bank' ? 'rgba(99, 102, 241, 0.1)' : methodId === 'visa' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(225, 29, 72, 0.1)'
+  const textColor = methodId === 'bank' ? '#6366f1' : methodId === 'visa' ? '#4f46e5' : '#e11d48'
   
   return (
     <span 
@@ -114,7 +114,7 @@ export default function ExpenseList() {
               const category = getCategoryById(expense.category, state.customCategories)
               return (
                 <div key={expense.id} className={`flex items-center gap-4 p-4 hover:bg-[var(--color-bg-hover)] transition-colors group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#6b7280'}15` }}>
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#94918b'}15` }}>
                     <CategoryIcon categoryId={expense.category} customCategories={state.customCategories} />
                   </div>
                   <div className="flex-1 min-w-0">

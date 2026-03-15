@@ -14,8 +14,8 @@ function PaymentBadge({ methodId }) {
   if (!method) return null
   
   const Icon = methodId === 'bank' ? Landmark : CreditCard
-  const bgColor = methodId === 'bank' ? '#3b82f620' : methodId === 'visa' ? '#1a1f7120' : '#eb001b20'
-  const textColor = methodId === 'bank' ? '#3b82f6' : methodId === 'visa' ? '#1a1f71' : '#eb001b'
+  const bgColor = methodId === 'bank' ? 'rgba(99, 102, 241, 0.1)' : methodId === 'visa' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(225, 29, 72, 0.1)'
+  const textColor = methodId === 'bank' ? '#6366f1' : methodId === 'visa' ? '#4f46e5' : '#e11d48'
   
   return (
     <span 

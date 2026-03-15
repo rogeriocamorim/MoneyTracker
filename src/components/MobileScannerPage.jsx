@@ -51,7 +51,7 @@ export default function MobileScannerPage() {
   }
 
   return (
-    <div className="min-h-screen min-h-dvh bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+    <div className="min-h-screen min-h-dvh p-4" style={{ backgroundColor: 'var(--color-bg-base, #f8f7f4)' }}>
       <Toaster position="top-center" />
       
       <motion.div 
@@ -61,26 +61,26 @@ export default function MobileScannerPage() {
       >
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'var(--color-accent, #6366f1)' }}>
             <Receipt className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Receipt Scanner</h1>
-            <p className="text-sm text-purple-200/70">Take photo for desktop</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary, #1a1a1a)' }}>Receipt Scanner</h1>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted, #94918b)' }}>Take photo for desktop</p>
           </div>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20">
+        <div className="rounded-3xl p-6 border" style={{ backgroundColor: 'var(--color-bg-elevated, #ffffff)', borderColor: 'var(--color-border, #e5e2dc)', boxShadow: 'var(--shadow-card)' }}>
           {!imagePreview ? (
             <div className="space-y-4">
               {/* Instructions */}
               <div className="text-center mb-6">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center">
-                  <Camera className="w-10 h-10 text-purple-300" />
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-accent-muted, rgba(99, 102, 241, 0.1))' }}>
+                  <Camera className="w-10 h-10" style={{ color: 'var(--color-accent, #6366f1)' }} />
                 </div>
-                <p className="text-white font-medium">Take a photo of your receipt</p>
-                <p className="text-sm text-purple-200/60 mt-1">
+                <p className="font-medium" style={{ color: 'var(--color-text-primary, #1a1a1a)' }}>Take a photo of your receipt</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted, #94918b)' }}>
                   It will be sent to your desktop for processing
                 </p>
               </div>
@@ -88,7 +88,8 @@ export default function MobileScannerPage() {
               {/* Camera Button (Primary) */}
               <button
                 onClick={() => cameraInputRef.current?.click()}
-                className="w-full py-6 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium flex flex-col items-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-purple-500/30"
+                className="w-full py-6 rounded-2xl text-white font-medium flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
+                style={{ backgroundColor: 'var(--color-accent, #6366f1)', boxShadow: '0 4px 14px -3px rgba(99, 102, 241, 0.4)' }}
               >
                 <Camera className="w-10 h-10" />
                 <span className="text-lg">Take Photo</span>
@@ -97,7 +98,8 @@ export default function MobileScannerPage() {
               {/* Upload Button */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-4 rounded-xl bg-white/10 text-white font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                className="w-full py-4 rounded-xl font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition-transform border"
+                style={{ backgroundColor: 'var(--color-bg-muted, #f1f0ec)', color: 'var(--color-text-primary, #1a1a1a)', borderColor: 'var(--color-border, #e5e2dc)' }}
               >
                 <Upload className="w-5 h-5" />
                 Choose from Gallery
@@ -122,7 +124,7 @@ export default function MobileScannerPage() {
           ) : (
             <div className="space-y-4">
               {/* Image Preview */}
-              <div className="relative rounded-2xl overflow-hidden bg-black/30">
+              <div className="relative rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--color-bg-muted, #f1f0ec)' }}>
                 <img
                   src={imagePreview}
                   alt="Receipt"
@@ -137,21 +139,21 @@ export default function MobileScannerPage() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                 >
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <Check className="w-8 h-8 text-green-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-muted, rgba(22, 163, 74, 0.08))' }}>
+                    <Check className="w-8 h-8" style={{ color: 'var(--color-success, #16a34a)' }} />
                   </div>
-                  <h3 className="text-white font-bold text-lg mb-2">Photo Saved!</h3>
-                  <p className="text-purple-200/70 text-sm">
+                  <h3 className="font-bold text-lg mb-2" style={{ color: 'var(--color-text-primary, #1a1a1a)' }}>Photo Saved!</h3>
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted, #94918b)' }}>
                     Open the app on your desktop.<br />
-                    Click "Scan Receipt" → "Get Photo from Phone"
+                    Click "Scan Receipt" &rarr; "Get Photo from Phone"
                   </p>
                   
-                  <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex items-center gap-2 text-purple-200/80 text-sm">
+                  <div className="mt-6 p-4 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-muted, #f1f0ec)', borderColor: 'var(--color-border, #e5e2dc)' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-secondary, #525252)' }}>
                       <Cloud className="w-4 h-4" />
                       <span>Same browser/device sync via localStorage</span>
                     </div>
-                    <p className="text-xs text-purple-200/50 mt-2">
+                    <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted, #94918b)' }}>
                       For cross-device sync, use Google Drive in Settings
                     </p>
                   </div>
@@ -160,7 +162,8 @@ export default function MobileScannerPage() {
                 <div className="space-y-3">
                   <button
                     onClick={saveForDesktop}
-                    className="w-full py-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 disabled:opacity-50"
+                    className="w-full py-4 rounded-xl text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--color-success, #16a34a)', boxShadow: '0 4px 14px -3px rgba(22, 163, 74, 0.4)' }}
                     disabled={isSaving}
                   >
                     {isSaving ? (
@@ -176,7 +179,8 @@ export default function MobileScannerPage() {
                       setImagePreview(null)
                       setSaved(false)
                     }}
-                    className="w-full py-3 rounded-xl bg-white/5 text-white/70 font-medium"
+                    className="w-full py-3 rounded-xl font-medium border"
+                    style={{ backgroundColor: 'var(--color-bg-muted, #f1f0ec)', color: 'var(--color-text-secondary, #525252)', borderColor: 'var(--color-border, #e5e2dc)' }}
                   >
                     Take Another Photo
                   </button>
@@ -188,13 +192,13 @@ export default function MobileScannerPage() {
 
         {/* Tips */}
         {!imagePreview && (
-          <div className="mt-6 bg-white/5 rounded-2xl p-4 border border-white/10">
-            <h3 className="text-sm font-medium text-white mb-2">📸 For best results</h3>
-            <ul className="text-xs text-purple-200/70 space-y-1">
-              <li>• Good lighting, no shadows</li>
-              <li>• Keep receipt flat and straight</li>
-              <li>• Make sure total amount is visible</li>
-              <li>• Include the full receipt if possible</li>
+          <div className="mt-6 rounded-2xl p-4 border" style={{ backgroundColor: 'var(--color-bg-elevated, #ffffff)', borderColor: 'var(--color-border, #e5e2dc)', boxShadow: 'var(--shadow-sm)' }}>
+            <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-primary, #1a1a1a)' }}>For best results</h3>
+            <ul className="text-xs space-y-1" style={{ color: 'var(--color-text-muted, #94918b)' }}>
+              <li>Good lighting, no shadows</li>
+              <li>Keep receipt flat and straight</li>
+              <li>Make sure total amount is visible</li>
+              <li>Include the full receipt if possible</li>
             </ul>
           </div>
         )}
@@ -202,7 +206,8 @@ export default function MobileScannerPage() {
         {/* Back Link */}
         <a 
           href="#/"
-          className="flex items-center justify-center gap-2 mt-6 text-purple-200/70 text-sm"
+          className="flex items-center justify-center gap-2 mt-6 text-sm"
+          style={{ color: 'var(--color-text-muted, #94918b)' }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard

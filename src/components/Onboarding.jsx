@@ -15,12 +15,23 @@ import {
   Trash2,
   Edit3,
   Globe,
-  Play
+  Play,
+  Cloud,
+  Loader2,
+  Key
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { importData } from '../utils/storage'
 import { expenseCategories } from '../data/categories'
+import { 
+  initGoogleApi, 
+  isSignedIn, 
+  signIn, 
+  loadFromGoogleDrive,
+  setClientId,
+  hasClientId
+} from '../utils/googleDrive'
 
 const features = [
   { icon: Wallet, title: 'Track Expenses', description: 'Record daily spending across bank and credit cards' },
@@ -245,13 +256,61 @@ const currencies = [
 
 // Generate a random color for custom categories
 const randomColor = () => {
-  const colors = ['#f97316', '#3b82f6', '#eab308', '#a855f7', '#ec4899', '#ef4444', '#14b8a6', '#22c55e', '#06b6d4', '#8b5cf6']
+  const colors = ['#f97316', '#6366f1', '#eab308', '#a855f7', '#ec4899', '#ef4444', '#14b8a6', '#22c55e', '#06b6d4', '#8b5cf6']
   return colors[Math.floor(Math.random() * colors.length)]
 }
 
 // Step 1: Welcome
-function WelcomeStep({ onNext, onImport, onDemo, isImporting, importSuccess }) {
+function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, importSuccess }) {
   const fileInputRef = useRef(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [showClientIdInput, setShowClientIdInput] = useState(false)
+  const [clientIdValue, setClientIdValue] = useState('')
+
+  const handleGoogleRestore = async () => {
+    setGoogleLoading(true)
+    try {
+      // Check if client ID is configured
+      if (!hasClientId()) {
+        setShowClientIdInput(true)
+        setGoogleLoading(false)
+        return
+      }
+
+      await initGoogleApi()
+      
+      // Sign in if not already
+      if (!isSignedIn()) {
+        await signIn()
+      }
+
+      // Load backup
+      const result = await loadFromGoogleDrive()
+      if (!result) {
+        toast.error('No backup found on Google Drive')
+        setGoogleLoading(false)
+        return
+      }
+
+      onGoogleRestore(result.data)
+      toast.success('Data restored from Google Drive!')
+    } catch (err) {
+      console.error('Google restore error:', err)
+      toast.error('Failed to restore from Google Drive')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  const handleSaveClientId = () => {
+    if (!clientIdValue.trim()) return
+    setClientId(clientIdValue.trim())
+    setClientIdValue('')
+    setShowClientIdInput(false)
+    toast.success('Google Client ID saved')
+    // Now trigger the restore flow again
+    handleGoogleRestore()
+  }
 
   return (
     <motion.div
@@ -280,7 +339,7 @@ function WelcomeStep({ onNext, onImport, onDemo, isImporting, importSuccess }) {
         </div>
       </div>
 
-      {/* Import option */}
+      {/* Import options */}
       <div className="card mb-4">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-11 h-11 rounded-xl bg-[var(--color-success-muted)] flex items-center justify-center">
@@ -300,6 +359,60 @@ function WelcomeStep({ onNext, onImport, onDemo, isImporting, importSuccess }) {
           </div>
         </div>
         
+        {/* Google Drive restore */}
+        <button 
+          onClick={handleGoogleRestore}
+          disabled={isImporting || importSuccess || googleLoading}
+          className="btn w-full mb-3 text-white"
+          style={{ backgroundColor: '#4285f4' }}
+        >
+          {googleLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Connecting...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <Cloud className="w-4 h-4" />
+              Restore from Google Drive
+            </span>
+          )}
+        </button>
+
+        {/* Client ID setup (shown when not configured) */}
+        {showClientIdInput && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mb-3 p-3 rounded-xl bg-[var(--color-bg-muted)] border border-[var(--color-border)]"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Key className="w-4 h-4 text-[var(--color-text-muted)]" />
+              <p className="text-[12px] font-medium text-[var(--color-text-primary)]">Google Client ID Required</p>
+            </div>
+            <p className="text-[11px] text-[var(--color-text-muted)] mb-3">
+              Enter your Google OAuth Client ID to connect to Google Drive.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={clientIdValue}
+                onChange={(e) => setClientIdValue(e.target.value)}
+                placeholder="Your Client ID..."
+                className="input flex-1 text-[13px]"
+              />
+              <button
+                onClick={handleSaveClientId}
+                disabled={!clientIdValue.trim()}
+                className="btn btn-primary"
+              >
+                Save
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Local JSON import */}
         <button 
           onClick={() => fileInputRef.current?.click()}
           disabled={isImporting || importSuccess}
@@ -565,7 +678,7 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
             {usedCategoryIds.map((catId, i) => {
               const budgetData = budgets[catId]
               const name = typeof budgetData === 'object' ? budgetData.name : (expenseCategories.find(c => c.id === catId)?.name || catId)
-              const color = typeof budgetData === 'object' ? budgetData.color : (expenseCategories.find(c => c.id === catId)?.color || '#6b7280')
+              const color = typeof budgetData === 'object' ? budgetData.color : (expenseCategories.find(c => c.id === catId)?.color || '#94918b')
               const budgetAmount = typeof budgetData === 'object' ? budgetData.amount : budgetData
               
               return (
@@ -623,7 +736,7 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
 }
 
 export default function Onboarding() {
-  const { completeSetup, dispatch, setBudget, updateSettings } = useMoney()
+  const { state, completeSetup, dispatch, setBudget, updateSettings } = useMoney()
   const [step, setStep] = useState(1)
   const [isImporting, setIsImporting] = useState(false)
   const [importSuccess, setImportSuccess] = useState(false)
@@ -691,6 +804,25 @@ export default function Onboarding() {
     toast.success('Welcome to MoneyTracker!')
   }
 
+  const handleGoogleRestore = (data) => {
+    if (data.expenses) dispatch({ type: 'SET_EXPENSES', payload: data.expenses })
+    if (data.income) dispatch({ type: 'SET_INCOME', payload: data.income })
+    if (data.budgets) dispatch({ type: 'SET_BUDGETS', payload: data.budgets })
+    if (data.customCategories) dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: data.customCategories })
+    if (data.currency || data.currencySymbol) {
+      updateSettings({ 
+        currency: data.currency || state?.settings?.currency, 
+        currencySymbol: data.currencySymbol || state?.settings?.currencySymbol 
+      })
+    }
+    
+    setImportSuccess(true)
+    // Auto-complete setup after Google restore
+    setTimeout(() => {
+      completeSetup()
+    }, 1500)
+  }
+
   const handleDemo = () => {
     const mockData = generateMockData()
     dispatch({ type: 'IMPORT_DATA', payload: mockData })
@@ -743,6 +875,7 @@ export default function Onboarding() {
               onNext={() => setStep(2)}
               onImport={handleImport}
               onDemo={handleDemo}
+              onGoogleRestore={handleGoogleRestore}
               isImporting={isImporting}
               importSuccess={importSuccess}
             />

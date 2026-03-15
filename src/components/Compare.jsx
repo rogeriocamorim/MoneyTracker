@@ -153,7 +153,7 @@ export default function Compare() {
   const handleNext = () => setStartMonth(prev => Math.max(0, prev - 1))
 
   // Colors for the chart bars
-  const barColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+  const barColors = ['#6366f1', '#16a34a', '#d97706', '#e11d48', '#8b5cf6', '#0891b2']
 
   return (
     <motion.div className="space-y-6" variants={container} initial="hidden" animate="show">

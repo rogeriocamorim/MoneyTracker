@@ -25,7 +25,7 @@ export default function Header({ onMenuClick }) {
   const today = format(new Date(), 'EEE, MMM d, yyyy')
 
   return (
-    <header className="sticky top-0 z-30 bg-[var(--color-bg-base)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
+    <header className="sticky top-0 z-30 border-b border-[var(--color-border)]" style={{ backgroundColor: 'rgba(248, 247, 244, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
       <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {/* Mobile menu button */}

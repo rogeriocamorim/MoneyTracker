@@ -9,7 +9,7 @@ import ReceiptScanner from './ReceiptScanner'
 
 // Random color generator for new categories
 const getRandomColor = () => {
-  const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899']
+  const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899']
   return colors[Math.floor(Math.random() * colors.length)]
 }
 
@@ -164,7 +164,7 @@ export default function ExpenseForm({ expense = null, onClose }) {
                     onChange={handleChange}
                     required
                     className="input"
-                    style={{ borderLeft: `4px solid ${selectedCategory?.color || '#6b7280'}` }}
+                    style={{ borderLeft: `4px solid ${selectedCategory?.color || '#94918b'}` }}
                   >
                     {budgetCategories.length > 0 && (
                       <optgroup label="📊 Budget Categories">

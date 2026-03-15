@@ -98,13 +98,8 @@ export function signIn() {
       resolve(resp)
     }
 
-    if (window.gapi.client.getToken() === null) {
-      // First time - prompt for consent
-      tokenClient.requestAccessToken({ prompt: 'consent' })
-    } else {
-      // Already have token - just refresh
-      tokenClient.requestAccessToken({ prompt: '' })
-    }
+    // Always show account picker so user can choose which Google account to use
+    tokenClient.requestAccessToken({ prompt: 'consent' })
   })
 }
 
