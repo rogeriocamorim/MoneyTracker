@@ -517,8 +517,11 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-medium text-[var(--color-text-primary)] truncate">
-                      {isIncome ? tx.notes || 'Income' : tx.description || category?.name}
+                      {isIncome ? tx.notes || 'Income' : category?.name}
                     </p>
+                    {!isIncome && tx.description && (
+                      <p className="text-[12px] text-[var(--color-text-muted)] truncate">{tx.description}</p>
+                    )}
                     <p className="text-[12px] text-[var(--color-text-muted)]">{format(new Date(tx.date), 'MMM d, yyyy')}</p>
                   </div>
                   <p className={`font-mono font-semibold ${isIncome ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>

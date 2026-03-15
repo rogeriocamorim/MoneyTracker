@@ -120,8 +120,11 @@ export default function CategoryExpensesModal({ category, expenses, onClose }) {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-[var(--color-text-primary)] truncate">
-                        {expense.description || category.name}
+                        {category.name}
                       </p>
+                      {expense.description && (
+                        <p className="text-[12px] text-[var(--color-text-muted)] truncate">{expense.description}</p>
+                      )}
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[12px] text-[var(--color-text-muted)]">
                           {format(parseISO(expense.date), 'MMM d, yyyy')}
