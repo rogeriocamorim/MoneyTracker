@@ -119,7 +119,7 @@ export default function Sidebar({ isOpen, onClose, onImportStatement, width = 28
                 if (window.innerWidth < 1024) onClose()
                 onImportStatement?.()
               }}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 w-full text-left"
+              className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
               style={{ color: 'var(--sidebar-text)' }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-active)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}

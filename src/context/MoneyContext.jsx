@@ -132,23 +132,43 @@ function reducer(state, action) {
         setupComplete: false,
       }
     
-    case 'BULK_ADD_EXPENSES':
+    case 'BULK_ADD_EXPENSES': {
+      if (!Array.isArray(action.payload) || action.payload.length === 0) return state
+      // Guard against double-import: filter out items whose date+amount already exist
+      const existingExpenseKeys = new Set(
+        state.expenses.map(e => `${e.date}|${e.amount}`)
+      )
+      const newExpenses = action.payload
+        .filter(e => e.date && e.amount != null)
+        .filter(e => !existingExpenseKeys.has(`${e.date}|${e.amount}`))
+      if (newExpenses.length === 0) return state
       return {
         ...state,
         expenses: [
           ...state.expenses,
-          ...action.payload.map(e => ({ ...e, id: uuidv4(), createdAt: Date.now() })),
+          ...newExpenses.map(e => ({ ...e, id: uuidv4(), createdAt: Date.now() })),
         ],
       }
+    }
     
-    case 'BULK_ADD_INCOME':
+    case 'BULK_ADD_INCOME': {
+      if (!Array.isArray(action.payload) || action.payload.length === 0) return state
+      // Guard against double-import: filter out items whose date+amount already exist
+      const existingIncomeKeys = new Set(
+        state.income.map(i => `${i.date}|${i.amount}`)
+      )
+      const newIncome = action.payload
+        .filter(i => i.date && i.amount != null)
+        .filter(i => !existingIncomeKeys.has(`${i.date}|${i.amount}`))
+      if (newIncome.length === 0) return state
       return {
         ...state,
         income: [
           ...state.income,
-          ...action.payload.map(i => ({ ...i, id: uuidv4() })),
+          ...newIncome.map(i => ({ ...i, id: uuidv4() })),
         ],
       }
+    }
     
     case 'IMPORT_DATA':
       return {

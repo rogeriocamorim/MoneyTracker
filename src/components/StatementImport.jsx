@@ -1,15 +1,15 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   X, FileUp, Upload, FileSpreadsheet, Check, AlertTriangle,
   ArrowRight, ArrowLeft, Loader2, CheckCircle2, XCircle,
   CreditCard, Landmark, ArrowDownCircle, ArrowUpCircle,
-  CheckSquare, Square, MinusSquare, Calendar
+  CheckSquare, Square, MinusSquare, Calendar, Search, RotateCcw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { expenseCategories, incomeSources, getAllCategories } from '../data/categories'
-import { parseBankStatement, findDuplicates } from '../utils/pdfParser'
+import { parseBankStatement, findDuplicates, autoCategorize } from '../utils/pdfParser'
 
 // ─── Step 1: Upload ─────────────────────────────────────────────────────────
 
@@ -19,7 +19,9 @@ function UploadStep({ onFileProcessed, isProcessing, setIsProcessing }) {
   const [error, setError] = useState(null)
 
   const handleFile = useCallback(async (file) => {
-    if (!file || file.type !== 'application/pdf') {
+    // T15: Accept files with .pdf extension even if MIME type is empty/wrong
+    const isPdf = file && (file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf'))
+    if (!isPdf) {
       setError('Please upload a PDF file')
       return
     }
@@ -52,24 +54,36 @@ function UploadStep({ onFileProcessed, isProcessing, setIsProcessing }) {
     handleFile(file)
   }, [handleFile])
 
+  // T11: Keyboard support for drop zone
+  const handleDropZoneKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      fileInputRef.current?.click()
+    }
+  }, [])
+
   return (
     <div className="p-6">
       <div className="text-center mb-6">
         <div className="w-16 h-16 rounded-2xl bg-[var(--color-accent)]/10 flex items-center justify-center mx-auto mb-4">
           <FileSpreadsheet className="w-8 h-8 text-[var(--color-accent)]" />
         </div>
-        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Import Bank Statement</h2>
+        <h2 id="statement-import-title" className="text-lg font-semibold text-[var(--color-text-primary)]">Import Bank Statement</h2>
         <p className="text-[13px] text-[var(--color-text-muted)] mt-1">
           Upload a PDF from CIBC Checking, CIBC Visa, or Costco Mastercard
         </p>
       </div>
 
-      {/* Drop zone */}
+      {/* Drop zone — T11: role, aria-label, tabIndex, keyboard handler */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload PDF file. Drop your PDF here or press Enter to browse."
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={handleDropZoneKeyDown}
         className="border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200"
         style={{
           borderColor: dragOver ? 'var(--color-accent)' : 'var(--color-border)',
@@ -99,11 +113,13 @@ function UploadStep({ onFileProcessed, isProcessing, setIsProcessing }) {
         type="file"
         accept=".pdf,application/pdf"
         className="hidden"
+        aria-hidden="true"
+        tabIndex={-1}
         onChange={(e) => handleFile(e.target.files[0])}
       />
 
       {error && (
-        <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+        <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2" role="alert">
           <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
           <p className="text-[13px] text-red-500">{error}</p>
         </div>
@@ -132,22 +148,31 @@ function UploadStep({ onFileProcessed, isProcessing, setIsProcessing }) {
 
 // ─── Step 2: Review & Classify ──────────────────────────────────────────────
 
-function ReviewStep({ transactions, duplicateIndices, statementType, allCategories, dateFrom, dateTo, onDateFromChange, onDateToChange, onUpdateTransaction, onToggleSelected, onSelectAll, onDeselectDuplicates }) {
+function ReviewStep({ transactions, duplicateIndices, statementType, allCategories, dateFrom, dateTo, onDateFromChange, onDateToChange, onResetDates, onUpdateTransaction, onToggleSelected, onSelectAll, onDeselectDuplicates }) {
+  // T14: Description search state
+  const [searchQuery, setSearchQuery] = useState('')
+
   // Compute min/max dates from all transactions for input bounds
   const { minDate, maxDate } = useMemo(() => {
     const dates = transactions.map(t => t.date).filter(Boolean).sort()
     return { minDate: dates[0] || '', maxDate: dates[dates.length - 1] || '' }
   }, [transactions])
 
-  // Filter transactions by date range
+  // T16: Check if dates differ from min/max (to show reset button)
+  const datesModified = dateFrom !== minDate || dateTo !== maxDate
+
+  // Filter transactions by date range and search query
   const filteredEntries = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim()
     return transactions.map((t, idx) => ({ transaction: t, originalIndex: idx }))
       .filter(({ transaction }) => {
         if (dateFrom && transaction.date < dateFrom) return false
         if (dateTo && transaction.date > dateTo) return false
+        // T14: Filter by description search
+        if (query && !transaction.description.toLowerCase().includes(query)) return false
         return true
       })
-  }, [transactions, dateFrom, dateTo])
+  }, [transactions, dateFrom, dateTo, searchQuery])
 
   // Map duplicate indices to filtered set
   const filteredDuplicateCount = useMemo(() => {
@@ -169,7 +194,7 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
         <div className="flex items-center gap-3 mb-3">
           <div
             className="px-3 py-1.5 rounded-lg text-[12px] font-medium"
-            style={{ background: 'var(--color-accent)/10', color: 'var(--color-accent)', border: '1px solid var(--color-accent)' }}
+            style={{ background: 'var(--color-accent-muted)', color: 'var(--color-accent)', border: '1px solid var(--color-accent)' }}
           >
             {statementType.label}
           </div>
@@ -180,16 +205,16 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
           </span>
           {filteredDuplicateCount > 0 && (
             <span className="text-[12px] text-amber-500 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" />
+              <AlertTriangle className="w-3 h-3" aria-hidden="true" />
               {filteredDuplicateCount} possible duplicates
             </span>
           )}
         </div>
 
-        {/* Date range filter */}
+        {/* Date range filter — T11: aria-labels on inputs */}
         <div className="flex items-center gap-3 mb-3 flex-wrap">
           <div className="flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)]">
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Date range:</span>
           </div>
           <input
@@ -199,6 +224,7 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
             min={minDate}
             max={dateTo || maxDate}
             onChange={(e) => onDateFromChange(e.target.value)}
+            aria-label="From date"
           />
           <span className="text-[12px] text-[var(--color-text-muted)]">to</span>
           <input
@@ -208,6 +234,31 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
             min={dateFrom || minDate}
             max={maxDate}
             onChange={(e) => onDateToChange(e.target.value)}
+            aria-label="To date"
+          />
+          {/* T16: Reset dates button */}
+          {datesModified && (
+            <button
+              onClick={onResetDates}
+              className="flex items-center gap-1 text-[11px] text-[var(--color-accent)] hover:underline"
+              aria-label="Reset date range to full range"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* T14: Description search filter */}
+        <div className="relative mb-3">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)]" aria-hidden="true" />
+          <input
+            type="text"
+            className="input text-[12px] py-1.5 pl-8 pr-3"
+            placeholder="Search transactions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search transactions by description"
           />
         </div>
 
@@ -216,6 +267,7 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
           <button
             onClick={() => onSelectAll(filteredEntries.map(e => e.originalIndex))}
             className="flex items-center gap-1.5 text-[12px] text-[var(--color-accent)] hover:underline"
+            aria-label={allFilteredSelected ? 'Deselect all transactions' : 'Select all transactions'}
           >
             {allFilteredSelected ? <CheckSquare className="w-3.5 h-3.5" /> : someFilteredSelected ? <MinusSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
             {allFilteredSelected ? 'Deselect All' : 'Select All'}
@@ -224,6 +276,7 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
             <button
               onClick={() => onDeselectDuplicates(filteredEntries.map(e => e.originalIndex))}
               className="flex items-center gap-1.5 text-[12px] text-amber-500 hover:underline"
+              aria-label="Deselect all duplicate transactions"
             >
               <XCircle className="w-3.5 h-3.5" />
               Deselect Duplicates
@@ -250,7 +303,9 @@ function ReviewStep({ transactions, duplicateIndices, statementType, allCategori
         ))}
         {filteredTotal === 0 && (
           <div className="text-center py-8">
-            <p className="text-[13px] text-[var(--color-text-muted)]">No transactions in this date range</p>
+            <p className="text-[13px] text-[var(--color-text-muted)]">
+              {searchQuery ? 'No transactions matching your search' : 'No transactions in this date range'}
+            </p>
           </div>
         )}
       </div>
@@ -271,8 +326,14 @@ function TransactionRow({ transaction, index, isDuplicate, allCategories, onTogg
       }}
     >
       <div className="flex items-start gap-3">
-        {/* Checkbox */}
-        <button onClick={onToggleSelected} className="mt-1 shrink-0">
+        {/* Checkbox — T11: role + aria-checked */}
+        <button
+          onClick={onToggleSelected}
+          className="mt-1 shrink-0"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={`${selected ? 'Deselect' : 'Select'} transaction: ${description}`}
+        >
           {selected ? (
             <CheckCircle2 className="w-5 h-5 text-[var(--color-accent)]" />
           ) : (
@@ -298,38 +359,41 @@ function TransactionRow({ transaction, index, isDuplicate, allCategories, onTogg
 
           {/* Bottom row: type toggle + category */}
           <div className="flex items-center gap-2">
-            {/* Type toggle */}
-            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+            {/* Type toggle — T11: aria-pressed */}
+            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }} role="group" aria-label="Transaction type">
               <button
                 onClick={() => onUpdate('type', 'debit')}
                 className="flex items-center gap-1 px-2 py-1 text-[11px] transition-colors"
+                aria-pressed={type === 'debit'}
                 style={{
                   background: type === 'debit' ? 'var(--color-danger)' : 'transparent',
                   color: type === 'debit' ? 'white' : 'var(--color-text-muted)',
                 }}
               >
-                <ArrowDownCircle className="w-3 h-3" />
+                <ArrowDownCircle className="w-3 h-3" aria-hidden="true" />
                 Expense
               </button>
               <button
                 onClick={() => onUpdate('type', 'credit')}
                 className="flex items-center gap-1 px-2 py-1 text-[11px] transition-colors"
+                aria-pressed={type === 'credit'}
                 style={{
                   background: type === 'credit' ? 'var(--color-success)' : 'transparent',
                   color: type === 'credit' ? 'white' : 'var(--color-text-muted)',
                 }}
               >
-                <ArrowUpCircle className="w-3 h-3" />
+                <ArrowUpCircle className="w-3 h-3" aria-hidden="true" />
                 Income
               </button>
             </div>
 
-            {/* Category / Source dropdown */}
+            {/* Category / Source dropdown — T11: aria-label */}
             {type === 'debit' ? (
               <select
                 value={category || 'other'}
                 onChange={(e) => onUpdate('category', e.target.value)}
                 className="text-[11px] py-1 px-2 rounded-lg bg-[var(--color-bg-muted)] border border-[var(--color-border)] text-[var(--color-text-primary)] flex-1 min-w-0"
+                aria-label="Expense category"
               >
                 {allCategories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -340,6 +404,7 @@ function TransactionRow({ transaction, index, isDuplicate, allCategories, onTogg
                 value={source || 'other'}
                 onChange={(e) => onUpdate('source', e.target.value)}
                 className="text-[11px] py-1 px-2 rounded-lg bg-[var(--color-bg-muted)] border border-[var(--color-border)] text-[var(--color-text-primary)] flex-1 min-w-0"
+                aria-label="Income source"
               >
                 {incomeSources.map(src => (
                   <option key={src.id} value={src.id}>{src.name}</option>
@@ -349,7 +414,7 @@ function TransactionRow({ transaction, index, isDuplicate, allCategories, onTogg
 
             {/* Duplicate badge */}
             {isDuplicate && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0" title="This transaction may already exist in your records">
                 Duplicate?
               </span>
             )}
@@ -392,7 +457,7 @@ function ConfirmStep({ transactions, statementType, dateFrom, dateTo }) {
           <div className="p-4 rounded-xl" style={{ background: 'var(--color-bg-muted)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ArrowDownCircle className="w-5 h-5 text-[var(--color-danger)]" />
+                <ArrowDownCircle className="w-5 h-5 text-[var(--color-danger)]" aria-hidden="true" />
                 <span className="text-[14px] font-medium text-[var(--color-text-primary)]">
                   {expenses.length} Expense{expenses.length !== 1 ? 's' : ''}
                 </span>
@@ -409,7 +474,7 @@ function ConfirmStep({ transactions, statementType, dateFrom, dateTo }) {
           <div className="p-4 rounded-xl" style={{ background: 'var(--color-bg-muted)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ArrowUpCircle className="w-5 h-5 text-[var(--color-success)]" />
+                <ArrowUpCircle className="w-5 h-5 text-[var(--color-success)]" aria-hidden="true" />
                 <span className="text-[14px] font-medium text-[var(--color-text-primary)]">
                   {income.length} Income Record{income.length !== 1 ? 's' : ''}
                 </span>
@@ -436,15 +501,72 @@ function ConfirmStep({ transactions, statementType, dateFrom, dateTo }) {
 export default function StatementImport({ onClose }) {
   const { state, bulkAddExpenses, bulkAddIncome } = useMoney()
   const allCategories = getAllCategories(state.customCategories)
+  const modalRef = useRef(null)
 
   const [step, setStep] = useState(1) // 1=Upload, 2=Review, 3=Confirm
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isImporting, setIsImporting] = useState(false) // T18: double-click protection
   const [fileName, setFileName] = useState('')
   const [statementType, setStatementType] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [duplicateIndices, setDuplicateIndices] = useState(new Set())
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  // T8: Escape key handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  // T10: Body scroll lock
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [])
+
+  // T9: Focus trap
+  useEffect(() => {
+    const modal = modalRef.current
+    if (!modal) return
+
+    // Auto-focus the modal on mount
+    modal.focus()
+
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return
+
+      const focusable = modal.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey) {
+        if (document.activeElement === first || !modal.contains(document.activeElement)) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (document.activeElement === last || !modal.contains(document.activeElement)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleTab)
+    return () => document.removeEventListener('keydown', handleTab)
+  }, [step]) // Re-bind when step changes (focusable elements change)
 
   // Handle parsed PDF result
   const handleFileProcessed = useCallback((result, name) => {
@@ -462,11 +584,11 @@ export default function StatementImport({ onClose }) {
       setDateTo(dates[dates.length - 1])
     }
 
-    // Prepare transactions with UI state
+    // T13: Prepare transactions with auto-categorization
     const prepared = result.transactions.map((t, idx) => ({
       ...t,
       selected: !dupes.has(idx), // Pre-deselect duplicates
-      category: t.type === 'debit' ? 'other' : undefined,
+      category: t.type === 'debit' ? autoCategorize(t.description) : undefined,
       source: t.type === 'credit' ? 'other' : undefined,
     }))
 
@@ -484,7 +606,7 @@ export default function StatementImport({ onClose }) {
         return {
           ...t,
           type: value,
-          category: value === 'debit' ? (t.category || 'other') : undefined,
+          category: value === 'debit' ? (t.category || autoCategorize(t.description)) : undefined,
           source: value === 'credit' ? (t.source || 'other') : undefined,
         }
       }
@@ -518,8 +640,20 @@ export default function StatementImport({ onClose }) {
     })))
   }, [duplicateIndices])
 
-  // Import the selected transactions (filtered by date range)
+  // T16: Reset date range to full transaction range
+  const handleResetDates = useCallback(() => {
+    const dates = transactions.map(t => t.date).sort()
+    if (dates.length > 0) {
+      setDateFrom(dates[0])
+      setDateTo(dates[dates.length - 1])
+    }
+  }, [transactions])
+
+  // Import the selected transactions (filtered by date range) — T18: with double-click protection
   const handleImport = useCallback(() => {
+    if (isImporting) return
+    setIsImporting(true)
+
     const selected = transactions.filter(t => {
       if (!t.selected) return false
       if (dateFrom && t.date < dateFrom) return false
@@ -555,7 +689,7 @@ export default function StatementImport({ onClose }) {
 
     toast.success(`Imported ${parts.join(' and ')}`)
     onClose()
-  }, [transactions, dateFrom, dateTo, bulkAddExpenses, bulkAddIncome, onClose])
+  }, [transactions, dateFrom, dateTo, bulkAddExpenses, bulkAddIncome, onClose, isImporting])
 
   const selectedCount = useMemo(() => {
     return transactions.filter(t => {
@@ -567,27 +701,32 @@ export default function StatementImport({ onClose }) {
   }, [transactions, dateFrom, dateTo])
 
   return (
-    <AnimatePresence>
       <motion.div
         className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="statement-import-title"
       >
         <motion.div
+          ref={modalRef}
           className="card w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
+          tabIndex={-1}
+          style={{ outline: 'none' }}
         >
           {/* Top bar with steps + close */}
           <div className="flex items-center justify-between p-4 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
-            {/* Step indicators */}
-            <div className="flex items-center gap-2">
+            {/* Step indicators — T12: aria-current */}
+            <div className="flex items-center gap-2" role="list" aria-label="Import steps">
               {[1, 2, 3].map(s => (
-                <div key={s} className="flex items-center gap-1.5">
+                <div key={s} className="flex items-center gap-1.5" role="listitem" aria-current={step === s ? 'step' : undefined}>
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-medium transition-colors"
                     style={{
@@ -595,17 +734,18 @@ export default function StatementImport({ onClose }) {
                       color: step >= s ? 'white' : 'var(--color-text-muted)',
                     }}
                   >
-                    {step > s ? <Check className="w-3.5 h-3.5" /> : s}
+                    {step > s ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : s}
                   </div>
                   <span className="text-[12px] text-[var(--color-text-muted)] hidden sm:inline">
                     {s === 1 ? 'Upload' : s === 2 ? 'Review' : 'Import'}
                   </span>
-                  {s < 3 && <ArrowRight className="w-3 h-3 text-[var(--color-text-muted)] mx-1" />}
+                  {s < 3 && <ArrowRight className="w-3 h-3 text-[var(--color-text-muted)] mx-1" aria-hidden="true" />}
                 </div>
               ))}
             </div>
 
-            <button onClick={onClose} className="btn btn-ghost p-2">
+            {/* T11: aria-label on close button */}
+            <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close import dialog">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -629,6 +769,7 @@ export default function StatementImport({ onClose }) {
                 dateTo={dateTo}
                 onDateFromChange={setDateFrom}
                 onDateToChange={setDateTo}
+                onResetDates={handleResetDates}
                 onUpdateTransaction={handleUpdateTransaction}
                 onToggleSelected={handleToggleSelected}
                 onSelectAll={handleSelectAll}
@@ -667,20 +808,24 @@ export default function StatementImport({ onClose }) {
                 </button>
               )}
 
+              {/* T18: Import button with double-click protection */}
               {step === 3 && (
                 <button
                   onClick={handleImport}
-                  disabled={selectedCount === 0}
+                  disabled={selectedCount === 0 || isImporting}
                   className="btn btn-primary flex items-center gap-2"
                 >
-                  <FileUp className="w-4 h-4" />
-                  Import {selectedCount} Transaction{selectedCount !== 1 ? 's' : ''}
+                  {isImporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileUp className="w-4 h-4" />
+                  )}
+                  {isImporting ? 'Importing...' : `Import ${selectedCount} Transaction${selectedCount !== 1 ? 's' : ''}`}
                 </button>
               )}
             </div>
           )}
         </motion.div>
       </motion.div>
-    </AnimatePresence>
   )
 }

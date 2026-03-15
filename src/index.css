@@ -14,6 +14,7 @@
   --color-accent: #6366f1;
   --color-accent-hover: #818cf8;
   --color-accent-muted: rgba(99, 102, 241, 0.1);
+  --color-accent-light: rgba(99, 102, 241, 0.15);
   
   --color-success: #16a34a;
   --color-success-muted: rgba(22, 163, 74, 0.08);
@@ -155,6 +156,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-primary:active {
   transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-secondary {

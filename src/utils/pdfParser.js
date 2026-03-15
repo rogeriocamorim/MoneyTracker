@@ -4,6 +4,13 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 // Setup pdf.js worker - use local worker file via Vite's ?url import
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const Y_BUCKET_TOLERANCE = 3       // Pixel tolerance for grouping text items into same row
+const FOOTER_LENGTH_THRESHOLD = 150 // Lines longer than this with banking keywords are treated as footer
+const REFERENCE_NUMBER_MIN_DIGITS = 9 // Minimum digits to consider a number as a reference/transaction ID
+const YEAR_RANGE_TOLERANCE = 2     // How far from current year a statement year can be
+
 // ─── Statement type detection ───────────────────────────────────────────────
 
 const STATEMENT_TYPES = {
@@ -86,10 +93,10 @@ async function extractTextFromPDF(file) {
 }
 
 function reconstructLines(pageItems) {
-  // Group items by Y coordinate (same row), with a tolerance of 3px
+  // Group items by Y coordinate (same row), with a tolerance for rounding
   const rows = {}
   for (const item of pageItems) {
-    const yKey = Math.round(item.y / 3) * 3 // bucket by 3px
+    const yKey = Math.round(item.y / Y_BUCKET_TOLERANCE) * Y_BUCKET_TOLERANCE
     if (!rows[yKey]) rows[yKey] = []
     rows[yKey].push(item)
   }
@@ -127,11 +134,15 @@ const MONTH_MAP = {
 
 function parseStatementYear(fullText) {
   // Try to find statement period year, e.g. "February 15, 2026 to March 20, 2026"
+  // Restrict to years within ±2 of current year to avoid copyright/footer years.
+  // Prefer the last valid occurrence (likely statement period end date).
+  const currentYear = new Date().getFullYear()
   const yearMatch = fullText.match(/20[2-3]\d/g)
   if (yearMatch && yearMatch.length > 0) {
-    return Math.max(...yearMatch.map(Number))
+    const validYears = yearMatch.map(Number).filter(y => Math.abs(y - currentYear) <= YEAR_RANGE_TOLERANCE)
+    return validYears.length > 0 ? validYears[validYears.length - 1] : currentYear
   }
-  return new Date().getFullYear()
+  return currentYear
 }
 
 function parseAmount(text) {
@@ -282,8 +293,8 @@ function cleanDescription(raw) {
   // Remove "BILL PAY" prefix but keep the rest
   desc = desc.replace(/^BILL PAY\s+\d+\s+/i, '')
 
-  // Remove reference numbers like "000000234649" (standalone 9+ digit numbers)
-  desc = desc.replace(/\b\d{9,}\b/g, '')
+  // Remove reference numbers (standalone long digit sequences)
+  desc = desc.replace(new RegExp(`\\b\\d{${REFERENCE_NUMBER_MIN_DIGITS},}\\b`, 'g'), '')
 
   // Remove sentences/fragments that contain footer boilerplate
   // Split by sentence boundaries or long phrases
@@ -306,8 +317,8 @@ function cleanDescription(raw) {
  */
 function isFooterLine(text) {
   if (FOOTER_PATTERNS.some(pat => pat.test(text))) return true
-  // Also catch very long lines (>150 chars) that contain typical disclaimer language
-  if (text.length > 150 && (/fee|charge|transaction|balance|statement|banking|currency/i.test(text))) return true
+  // Also catch very long lines that contain typical disclaimer language
+  if (text.length > FOOTER_LENGTH_THRESHOLD && (/fee|charge|transaction|balance|statement|banking|currency/i.test(text))) return true
   // Lines starting with TM (trademark footnote) or * (footnote marker) or Note:
   if (/^(TM\s|Note:|If you|\*\s)/.test(text)) return true
   // Lines containing legal/disclaimer phrases
@@ -610,7 +621,9 @@ function parseCIBCCreditCardTransactions(pages, year) {
         }
 
         // Determine if credit (payment/refund) or debit (purchase)
-        const isCredit = amount < 0 || lowerDesc.includes('payment') || lowerDesc.includes('refund')
+        // Only rely on the amount sign (unicode minus U+2212 makes amount negative for credits).
+        // Do NOT use keyword matching — merchants like "PAYMENT SOLUTIONS INC" get misclassified.
+        const isCredit = amount < 0
 
         transactions.push({
           date,
@@ -732,6 +745,87 @@ export function findDuplicates(parsedTransactions, existingExpenses = [], existi
   }
 
   return duplicateIndices
+}
+
+/**
+ * Auto-categorize a transaction based on description keywords.
+ * Returns the best-matching expense category ID, or 'other' if no match.
+ *
+ * @param {string} description - Transaction description text
+ * @returns {string} - Category ID (matches expenseCategories IDs)
+ */
+const CATEGORY_KEYWORDS = {
+  food: [
+    'metro', 'loblaws', 'sobeys', 'no frills', 'walmart', 'costco',
+    'superstore', 'freshco', 'food basics', 'safeway', 'save-on', 'grocery',
+    'farm boy', 'whole foods', 'maxi', 'iga',
+  ],
+  dining: [
+    'restaurant', 'mcdonald', 'tim horton', 'starbucks', 'subway', 'pizza',
+    'sushi', 'a&w', 'wendy', 'popeye', 'uber eats', 'doordash',
+    'skip the dishes', 'café', 'cafe', 'bistro', 'grill', 'diner',
+    'burrito', 'chipotle', 'harveys', 'mary brown',
+  ],
+  transport: [
+    'shell', 'esso', 'petro-canada', 'petro canada', 'gas', 'fuel',
+    'uber ', 'lyft', 'presto', 'transit', 'parking', 'impark',
+    'canadian tire gas', 'pioneer', 'ultramar', 'go transit',
+  ],
+  entertainment: [
+    'netflix', 'spotify', 'disney', 'amazon prime', 'apple tv',
+    'youtube', 'cinema', 'theatre', 'movie', 'cineplex', 'game',
+  ],
+  subscriptions: [
+    'subscription', 'apple.com', 'google play', 'icloud',
+    'adobe', 'microsoft 365', 'chatgpt', 'openai',
+  ],
+  shopping: [
+    'amazon', 'best buy', 'canadian tire', 'dollarama', 'ikea',
+    'home depot', 'winners', 'marshalls', 'indigo', 'staples',
+  ],
+  health: [
+    'pharmacy', 'shoppers drug', 'rexall', 'medical', 'dental',
+    'doctor', 'clinic', 'hospital', 'physio', 'optom',
+  ],
+  utilities: [
+    'hydro', 'enbridge', 'bell ', 'rogers', 'telus', 'fido',
+    'internet', 'electric', 'water bill', 'gas bill',
+  ],
+  housing: [
+    'rent', 'mortgage', 'property tax', 'condo fee', 'landlord',
+  ],
+  insurance: [
+    'insurance', 'manulife', 'sun life', 'great-west', 'desjardins',
+  ],
+  personal: [
+    'salon', 'barber', 'spa', 'beauty', 'haircut',
+  ],
+  education: [
+    'tuition', 'school', 'university', 'college', 'udemy', 'course',
+    'coursera', 'skillshare',
+  ],
+  gifts: [
+    'donation', 'charity', 'gift', 'united way', 'red cross',
+  ],
+  travel: [
+    'hotel', 'airbnb', 'air canada', 'westjet', 'booking.com',
+    'expedia', 'flight', 'marriott', 'hilton',
+  ],
+}
+
+export function autoCategorize(description) {
+  if (!description) return 'other'
+  const lower = description.toLowerCase()
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (lower.includes(keyword)) {
+        return category
+      }
+    }
+  }
+
+  return 'other'
 }
 
 export { STATEMENT_TYPES }
