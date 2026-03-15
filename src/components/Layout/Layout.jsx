@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import StatementImport from '../StatementImport'
 
 const SIDEBAR_WIDTH = 280
 
@@ -10,6 +11,7 @@ export default function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [showStatementImport, setShowStatementImport] = useState(false)
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024)
@@ -27,6 +29,7 @@ export default function Layout() {
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
+        onImportStatement={() => setShowStatementImport(true)}
         width={SIDEBAR_WIDTH}
       />
       
@@ -57,6 +60,13 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Statement Import Modal */}
+      <AnimatePresence>
+        {showStatementImport && (
+          <StatementImport onClose={() => setShowStatementImport(false)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

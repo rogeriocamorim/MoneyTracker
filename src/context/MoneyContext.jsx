@@ -132,6 +132,24 @@ function reducer(state, action) {
         setupComplete: false,
       }
     
+    case 'BULK_ADD_EXPENSES':
+      return {
+        ...state,
+        expenses: [
+          ...state.expenses,
+          ...action.payload.map(e => ({ ...e, id: uuidv4(), createdAt: Date.now() })),
+        ],
+      }
+    
+    case 'BULK_ADD_INCOME':
+      return {
+        ...state,
+        income: [
+          ...state.income,
+          ...action.payload.map(i => ({ ...i, id: uuidv4() })),
+        ],
+      }
+    
     case 'IMPORT_DATA':
       return {
         ...state,
@@ -248,6 +266,8 @@ export function MoneyProvider({ children }) {
     addCustomCategory: (category) => dispatch({ type: 'ADD_CUSTOM_CATEGORY', payload: category }),
     removeCustomCategory: (id) => dispatch({ type: 'REMOVE_CUSTOM_CATEGORY', payload: id }),
     updateSettings: (settings) => dispatch({ type: 'UPDATE_SETTINGS', payload: settings }),
+    bulkAddExpenses: (expenses) => dispatch({ type: 'BULK_ADD_EXPENSES', payload: expenses }),
+    bulkAddIncome: (income) => dispatch({ type: 'BULK_ADD_INCOME', payload: income }),
     importData: (data) => dispatch({ type: 'IMPORT_DATA', payload: data }),
   }
 

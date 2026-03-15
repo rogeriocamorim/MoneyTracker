@@ -8,7 +8,8 @@ import {
   Settings,
   TrendingUp,
   X,
-  GitCompare
+  GitCompare,
+  FileUp
 } from 'lucide-react'
 
 const navItems = [
@@ -20,7 +21,7 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
-export default function Sidebar({ isOpen, onClose, width = 280 }) {
+export default function Sidebar({ isOpen, onClose, onImportStatement, width = 280 }) {
   return (
     <>
       {/* Mobile overlay */}
@@ -107,6 +108,26 @@ export default function Sidebar({ isOpen, onClose, width = 280 }) {
               </li>
             ))}
           </ul>
+
+          {/* Import Statement action */}
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+            <p className="px-3 py-2 text-[11px] uppercase tracking-wider font-medium" style={{ color: 'var(--sidebar-text)' }}>
+              Tools
+            </p>
+            <button
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose()
+                onImportStatement?.()
+              }}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 w-full text-left"
+              style={{ color: 'var(--sidebar-text)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-active)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <FileUp className="w-5 h-5" strokeWidth={2} />
+              <span className="text-[14px]">Import Statement</span>
+            </button>
+          </div>
         </nav>
 
         {/* Footer */}
