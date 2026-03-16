@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -23,6 +23,29 @@ export default function Modal({
   footer,
   className = '',
 }) {
+  const panelRef = useRef(null)
+  const previousFocusRef = useRef(null)
+  const titleId = useId()
+  const descId = useId()
+
+  // Save and restore focus
+  useEffect(() => {
+    if (isOpen) {
+      previousFocusRef.current = document.activeElement
+      // Focus the panel (or close button) on open
+      requestAnimationFrame(() => {
+        const firstFocusable = panelRef.current?.querySelector(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+        if (firstFocusable) firstFocusable.focus()
+        else panelRef.current?.focus()
+      })
+    } else if (previousFocusRef.current) {
+      previousFocusRef.current.focus?.()
+      previousFocusRef.current = null
+    }
+  }, [isOpen])
+
   // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -36,7 +59,26 @@ export default function Modal({
   // ESC to close
   const handleKeyDown = useCallback(
     (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') {
+        onClose?.()
+        return
+      }
+      // Focus trap: Tab and Shift+Tab cycle within modal
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusables = panelRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     },
     [onClose]
   )
@@ -60,10 +102,12 @@ export default function Modal({
             transition={{ duration: 0.15 }}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={closeOnOverlay ? onClose : undefined}
+            aria-hidden="true"
           />
 
           {/* Panel */}
           <motion.div
+            ref={panelRef}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -77,19 +121,27 @@ export default function Modal({
             `}
             role="dialog"
             aria-modal="true"
-            aria-label={title}
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={description ? descId : undefined}
+            tabIndex={-1}
           >
             {/* Header */}
             {(title || showClose) && (
               <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
                 <div>
                   {title && (
-                    <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                    <h2
+                      id={titleId}
+                      className="text-lg font-semibold text-[var(--color-text-primary)]"
+                    >
                       {title}
                     </h2>
                   )}
                   {description && (
-                    <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+                    <p
+                      id={descId}
+                      className="text-sm text-[var(--color-text-muted)] mt-0.5"
+                    >
                       {description}
                     </p>
                   )}

@@ -283,7 +283,8 @@ describe('Dashboard interactions', () => {
     await user.click(spendingCategoryItem)
 
     // CategoryExpensesModal should appear with category heading and expense count
-    expect(screen.getByText('2 expenses')).toBeInTheDocument()
+    // Text "2 expenses" is split across elements (with middot and currency span), use regex on content
+    expect(screen.getByText((content) => content.includes('2 expenses'))).toBeInTheDocument()
     // Category name now appears as primary label in each row + in the modal header
     // Descriptions appear as secondary text below the category name
     const groceryEls = screen.getAllByText('Grocery run')
@@ -322,7 +323,8 @@ describe('CategoryExpensesModal', () => {
     const foodEls = screen.getAllByText('Food & Groceries')
     expect(foodEls.length).toBeGreaterThanOrEqual(2) // header + expense row
     // Should show only food expenses (1 expense)
-    expect(screen.getByText('1 expense')).toBeInTheDocument()
+    // Text "1 expense" is split across elements (with middot and currency span), use flexible matcher
+    expect(screen.getByText((content) => content.includes('1 expense'))).toBeInTheDocument()
     // Description appears as secondary text below the category name
     expect(screen.getByText('Groceries')).toBeInTheDocument()
     // Transport expense should not be visible

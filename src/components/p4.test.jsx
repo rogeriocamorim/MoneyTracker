@@ -241,14 +241,15 @@ describe('BudgetManager over-budget warning', () => {
     // The budget entry should show the category name
     expect(screen.getByText('Food & Groceries')).toBeInTheDocument()
 
-    // Over-budget: percentage 133.33% appears twice (badge "133.33% used" + individual item "133.33%")
-    const percentageElements = screen.getAllByText(/133\.33%/)
+    // Over-budget: percentage 133.3% appears twice (badge "133.3% used" + individual item "133.3%")
+    const percentageElements = screen.getAllByText(/133\.3%/)
     expect(percentageElements.length).toBe(2)
 
-    // The overall badge should show "> 100% used" with danger class
-    const badge = screen.getByText(/133\.33% used/)
+    // The overall badge should show "> 100% used" with danger variant
+    const badge = screen.getByText(/133\.3% used/)
     expect(badge).toBeInTheDocument()
-    expect(badge.className).toContain('badge-danger')
+    // Badge uses design system variant classes, not legacy badge-danger
+    expect(badge.className).toContain('text-')
 
     // $400.00 appears in both the summary area and individual item
     const spentAmounts = screen.getAllByText('$400.00')

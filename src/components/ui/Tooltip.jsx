@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Tooltip({
@@ -11,6 +11,7 @@ export default function Tooltip({
   const [show, setShow] = useState(false)
   const timeoutRef = useRef(null)
   const triggerRef = useRef(null)
+  const tooltipId = useId()
 
   const handleEnter = () => {
     timeoutRef.current = setTimeout(() => setShow(true), delay)
@@ -20,6 +21,13 @@ export default function Tooltip({
     clearTimeout(timeoutRef.current)
     setShow(false)
   }
+
+  // ESC to dismiss tooltip (WCAG 1.4.13)
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape' && show) {
+      setShow(false)
+    }
+  }, [show])
 
   useEffect(() => {
     return () => clearTimeout(timeoutRef.current)
@@ -42,11 +50,14 @@ export default function Tooltip({
       onMouseLeave={handleLeave}
       onFocus={handleEnter}
       onBlur={handleLeave}
+      onKeyDown={handleKeyDown}
+      aria-describedby={show ? tooltipId : undefined}
     >
       {children}
       <AnimatePresence>
         {show && (
           <motion.div
+            id={tooltipId}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}

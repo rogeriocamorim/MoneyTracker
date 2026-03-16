@@ -147,7 +147,9 @@ describe('ExpenseList', () => {
 
   it('renders the Add Expense button', () => {
     renderPage(ExpenseList)
-    expect(screen.getByText('Add Expense')).toBeInTheDocument()
+    // "Add Expense" appears in both the header button and the empty state action
+    const addButtons = screen.getAllByText('Add Expense')
+    expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows search input', () => {
@@ -198,7 +200,9 @@ describe('IncomeList', () => {
 
   it('renders the Add Income button', () => {
     renderPage(IncomeList)
-    expect(screen.getByText('Add Income')).toBeInTheDocument()
+    // "Add Income" appears in both the header button and the empty state action
+    const addButtons = screen.getAllByText('Add Income')
+    expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows search input', () => {
@@ -236,7 +240,9 @@ describe('BudgetManager', () => {
 
   it('renders the Add Budget button', () => {
     renderPage(BudgetManager)
-    expect(screen.getByText('Add Budget')).toBeInTheDocument()
+    // "Add Budget" appears in both the header button and the empty state action
+    const addButtons = screen.getAllByText('Add Budget')
+    expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders Monthly Overview section', () => {

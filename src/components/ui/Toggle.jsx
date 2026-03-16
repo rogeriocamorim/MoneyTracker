@@ -56,6 +56,8 @@ export function ThemeToggle({ className = '' }) {
   return (
     <button
       onClick={toggleTheme}
+      role="switch"
+      aria-checked={theme === 'dark'}
       className={`
         p-2 rounded-[var(--radius-lg)] transition-colors
         text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]

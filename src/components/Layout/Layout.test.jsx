@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { MoneyProvider } from '../../context/MoneyContext'
+import { ThemeProvider } from '../../context/ThemeContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -13,9 +14,11 @@ vi.mock('../../utils/googleDrive', () => ({
 
 function renderInRouter(ui, { initialEntries = ['/'] } = {}) {
   return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      {ui}
-    </MemoryRouter>
+    <ThemeProvider>
+      <MemoryRouter initialEntries={initialEntries}>
+        {ui}
+      </MemoryRouter>
+    </ThemeProvider>
   )
 }
 
@@ -30,11 +33,13 @@ function renderInProviders(ui, { initialEntries = ['/'] } = {}) {
   }))
 
   return render(
-    <MoneyProvider>
-      <MemoryRouter initialEntries={initialEntries}>
-        {ui}
-      </MemoryRouter>
-    </MoneyProvider>
+    <ThemeProvider>
+      <MoneyProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          {ui}
+        </MemoryRouter>
+      </MoneyProvider>
+    </ThemeProvider>
   )
 }
 
@@ -46,9 +51,10 @@ describe('Sidebar', () => {
     expect(screen.getByText('MoneyTracker')).toBeInTheDocument()
   })
 
-  it('renders the tagline', () => {
+  it('renders the storage type label', () => {
     renderInRouter(<Sidebar isOpen={true} onClose={() => {}} />)
-    expect(screen.getByText('Personal Finance')).toBeInTheDocument()
+    // Redesigned sidebar shows "Local Storage" as the storage type label
+    expect(screen.getByText('Local Storage')).toBeInTheDocument()
   })
 
   it('renders all navigation items', () => {
@@ -63,7 +69,8 @@ describe('Sidebar', () => {
 
   it('renders the storage footer', () => {
     renderInRouter(<Sidebar isOpen={true} onClose={() => {}} />)
-    expect(screen.getByText('Saved locally in browser')).toBeInTheDocument()
+    // Redesigned sidebar footer text
+    expect(screen.getByText('Saved in browser')).toBeInTheDocument()
   })
 
   it('has nav links with correct hrefs', () => {

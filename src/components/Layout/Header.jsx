@@ -14,15 +14,24 @@ export default function Header({ onMenuClick, onOpenCommandPalette }) {
   const today = format(new Date(), 'EEE, MMM d, yyyy')
 
   return (
-    <header
-      className="sticky top-0 z-30 border-b border-[var(--color-border)]"
-      style={{
-        backgroundColor: 'var(--header-bg)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        height: 'var(--header-height)',
-      }}
-    >
+    <>
+      {/* Skip to content link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[999] focus:px-4 focus:py-2 focus:bg-[var(--color-accent)] focus:text-white focus:rounded-[var(--radius-lg)] focus:text-sm focus:font-medium"
+      >
+        Skip to content
+      </a>
+      <header
+        role="banner"
+        className="sticky top-0 z-30 border-b border-[var(--color-border)]"
+        style={{
+          backgroundColor: 'var(--header-bg)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          height: 'var(--header-height)',
+        }}
+      >
       <div className="px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
         {/* Left side: menu button + title */}
         <div className="flex items-center gap-4">
@@ -77,6 +86,7 @@ export default function Header({ onMenuClick, onOpenCommandPalette }) {
           </div>
         </div>
       </div>
-    </header>
+      </header>
+    </>
   )
 }

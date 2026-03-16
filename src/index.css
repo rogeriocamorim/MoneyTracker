@@ -310,8 +310,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ----------------------------------------------------------------
-   Legacy compatibility classes (used by existing components
-   during incremental migration — will be removed in Phase 5)
+   Legacy compatibility classes (used by StatementImport.jsx
+   and ReceiptScanner.jsx — kept until those components migrate)
    ---------------------------------------------------------------- */
 .card {
   background-color: var(--color-bg-subtle);
@@ -384,15 +384,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color: var(--color-text-primary);
 }
 
-.btn-danger {
-  background-color: var(--color-danger-muted);
-  color: var(--color-danger);
-}
-
-.btn-danger:hover {
-  background-color: rgba(220, 38, 38, 0.15);
-}
-
 .input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
@@ -431,15 +422,4 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .badge-danger {
   background-color: var(--color-danger-muted);
   color: var(--color-danger);
-}
-
-.badge-warning {
-  background-color: var(--color-warning-muted);
-  color: var(--color-warning);
-}
-
-.divider {
-  height: 1px;
-  background-color: var(--color-border);
-  margin: var(--space-4) 0;
 }

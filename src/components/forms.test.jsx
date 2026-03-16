@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { MoneyProvider } from '../context/MoneyContext'
@@ -177,8 +177,8 @@ describe('ExpenseForm', () => {
     const onClose = vi.fn()
     renderWithProviders(<ExpenseForm onClose={onClose} />)
 
-    // Open receipt scanner
-    const scanBtn = screen.getByTitle('Scan Receipt')
+    // Open receipt scanner — button now uses text content instead of title
+    const scanBtn = screen.getByRole('button', { name: /Scan Receipt/i })
     await user.click(scanBtn)
 
     // Click mock extract button
@@ -209,10 +209,9 @@ describe('IncomeForm', () => {
     const onClose = vi.fn()
     renderWithProviders(<IncomeForm onClose={onClose} />)
 
-    // Fill amount
+    // Fill amount — use fireEvent for number inputs to avoid character-by-character issues
     const amountInput = screen.getByPlaceholderText('0.00')
-    await user.clear(amountInput)
-    await user.type(amountInput, '3000')
+    fireEvent.change(amountInput, { target: { value: '3000' } })
 
     // Fill notes
     const notesInput = screen.getByPlaceholderText('Optional description')
