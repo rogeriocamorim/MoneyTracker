@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, subDays, subMonths } from 'date-fns'
-import { 
-  TrendingUp, 
-  Upload, 
-  ArrowRight, 
+import {
+  TrendingUp,
+  Upload,
+  ArrowRight,
   ArrowLeft,
   Check,
   Wallet,
@@ -24,14 +24,15 @@ import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { importData } from '../utils/storage'
 import { expenseCategories } from '../data/categories'
-import { 
-  initGoogleApi, 
-  isSignedIn, 
-  signIn, 
+import {
+  initGoogleApi,
+  isSignedIn,
+  signIn,
   loadFromGoogleDrive,
   setClientId,
   hasClientId
 } from '../utils/googleDrive'
+import { Card, Button, Input } from './ui'
 
 const features = [
   { icon: Wallet, title: 'Track Expenses', description: 'Record daily spending across bank and credit cards' },
@@ -48,19 +49,15 @@ const generateMockData = () => {
   let expenseId = 1
   let incomeId = 1
 
-  // Expense templates with realistic variations
   const expenseTemplates = [
-    // Recurring monthly
     { category: 'housing', description: 'Rent payment', baseAmount: 1500, variation: 0, paymentMethod: 'bank', dayOfMonth: 1 },
     { category: 'utilities', description: 'Electricity bill', baseAmount: 120, variation: 40, paymentMethod: 'bank', dayOfMonth: 5 },
     { category: 'utilities', description: 'Internet bill', baseAmount: 75, variation: 0, paymentMethod: 'bank', dayOfMonth: 8 },
     { category: 'subscriptions', description: 'Netflix', baseAmount: 15.99, variation: 0, paymentMethod: 'visa', dayOfMonth: 10 },
     { category: 'subscriptions', description: 'Spotify', baseAmount: 11.99, variation: 0, paymentMethod: 'visa', dayOfMonth: 12 },
     { category: 'insurance', description: 'Car insurance', baseAmount: 180, variation: 0, paymentMethod: 'bank', dayOfMonth: 15 },
-    // Weekly groceries (4x per month)
     { category: 'food', description: 'Grocery shopping', baseAmount: 95, variation: 35, paymentMethod: 'visa', weekly: true },
     { category: 'food', description: 'Costco run', baseAmount: 150, variation: 50, paymentMethod: 'mastercard', dayOfMonth: 20 },
-    // Variable expenses
     { category: 'transport', description: 'Gas station', baseAmount: 55, variation: 15, paymentMethod: 'bank', timesPerMonth: 3 },
     { category: 'dining', description: 'Restaurant dinner', baseAmount: 65, variation: 25, paymentMethod: 'mastercard', timesPerMonth: 2 },
     { category: 'dining', description: 'Coffee shop', baseAmount: 18, variation: 8, paymentMethod: 'visa', timesPerMonth: 4 },
@@ -70,7 +67,6 @@ const generateMockData = () => {
     { category: 'shopping', description: 'Amazon order', baseAmount: 65, variation: 45, paymentMethod: 'visa', timesPerMonth: 2 },
   ]
 
-  // Special one-time expenses per month
   const specialExpenses = [
     { month: 11, category: 'gifts', description: 'Christmas gifts', amount: 450, paymentMethod: 'mastercard' },
     { month: 10, category: 'entertainment', description: 'Halloween party supplies', amount: 85, paymentMethod: 'visa' },
@@ -84,14 +80,12 @@ const generateMockData = () => {
     { month: 5, category: 'gifts', description: "Mother's Day gift", amount: 95, paymentMethod: 'visa' },
   ]
 
-  // Generate expenses for each month (last 12 months)
   for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
     const monthDate = subMonths(today, monthOffset)
     const currentMonth = monthDate.getMonth()
-    
+
     expenseTemplates.forEach(template => {
       if (template.weekly) {
-        // Weekly expenses (4 times per month)
         for (let week = 0; week < 4; week++) {
           const day = 3 + (week * 7)
           const amount = template.baseAmount + (Math.random() * template.variation * 2 - template.variation)
@@ -105,7 +99,6 @@ const generateMockData = () => {
           })
         }
       } else if (template.timesPerMonth) {
-        // Multiple times per month
         for (let i = 0; i < template.timesPerMonth; i++) {
           const day = Math.floor(Math.random() * 25) + 1
           const amount = template.baseAmount + (Math.random() * template.variation * 2 - template.variation)
@@ -119,7 +112,6 @@ const generateMockData = () => {
           })
         }
       } else if (template.monthlyChance) {
-        // Random occurrence
         if (Math.random() < template.monthlyChance) {
           const day = Math.floor(Math.random() * 25) + 1
           mockExpenses.push({
@@ -132,7 +124,6 @@ const generateMockData = () => {
           })
         }
       } else if (template.dayOfMonth) {
-        // Fixed day of month
         const amount = template.baseAmount + (Math.random() * template.variation * 2 - template.variation)
         mockExpenses.push({
           id: `e${expenseId++}`,
@@ -145,7 +136,6 @@ const generateMockData = () => {
       }
     })
 
-    // Add special expenses for specific months
     specialExpenses.forEach(special => {
       if (currentMonth === special.month) {
         mockExpenses.push({
@@ -160,9 +150,7 @@ const generateMockData = () => {
     })
   }
 
-  // Generate income for each month (last 12 months)
   for (let monthOffset = 0; monthOffset < 12; monthOffset++) {
-    // Main salary (twice a month)
     mockIncome.push({
       id: `i${incomeId++}`,
       date: format(subDays(subMonths(today, monthOffset), 1), 'yyyy-MM-dd'),
@@ -178,7 +166,6 @@ const generateMockData = () => {
       notes: 'Salary - second half',
     })
 
-    // Occasional freelance (every 2-3 months)
     if (monthOffset % 2 === 0) {
       mockIncome.push({
         id: `i${incomeId++}`,
@@ -189,7 +176,6 @@ const generateMockData = () => {
       })
     }
 
-    // Quarterly dividends
     if (monthOffset % 3 === 0) {
       mockIncome.push({
         id: `i${incomeId++}`,
@@ -200,7 +186,6 @@ const generateMockData = () => {
       })
     }
 
-    // Wife's business income (monthly, variable)
     mockIncome.push({
       id: `i${incomeId++}`,
       date: format(subDays(subMonths(today, monthOffset), 10), 'yyyy-MM-dd'),
@@ -210,7 +195,6 @@ const generateMockData = () => {
     })
   }
 
-  // Mock budgets
   const mockBudgets = {
     food: 650,
     transport: 200,
@@ -242,16 +226,16 @@ const generateMockData = () => {
 }
 
 const currencies = [
-  { code: 'CAD', symbol: '$', name: 'Canadian Dollar', flag: '🇨🇦' },
-  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
-  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
-  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧' },
-  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '🇧🇷' },
-  { code: 'AUD', symbol: '$', name: 'Australian Dollar', flag: '🇦🇺' },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳' },
-  { code: 'MXN', symbol: '$', name: 'Mexican Peso', flag: '🇲🇽' },
-  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc', flag: '🇨🇭' },
+  { code: 'CAD', symbol: '$', name: 'Canadian Dollar', flag: '\u{1F1E8}\u{1F1E6}' },
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '\u{1F1FA}\u{1F1F8}' },
+  { code: 'EUR', symbol: '\u20AC', name: 'Euro', flag: '\u{1F1EA}\u{1F1FA}' },
+  { code: 'GBP', symbol: '\u00A3', name: 'British Pound', flag: '\u{1F1EC}\u{1F1E7}' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', flag: '\u{1F1E7}\u{1F1F7}' },
+  { code: 'AUD', symbol: '$', name: 'Australian Dollar', flag: '\u{1F1E6}\u{1F1FA}' },
+  { code: 'JPY', symbol: '\u00A5', name: 'Japanese Yen', flag: '\u{1F1EF}\u{1F1F5}' },
+  { code: 'INR', symbol: '\u20B9', name: 'Indian Rupee', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'MXN', symbol: '$', name: 'Mexican Peso', flag: '\u{1F1F2}\u{1F1FD}' },
+  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc', flag: '\u{1F1E8}\u{1F1ED}' },
 ]
 
 // Generate a random color for custom categories
@@ -270,7 +254,6 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
   const handleGoogleRestore = async () => {
     setGoogleLoading(true)
     try {
-      // Check if client ID is configured
       if (!hasClientId()) {
         setShowClientIdInput(true)
         setGoogleLoading(false)
@@ -278,13 +261,11 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
       }
 
       await initGoogleApi()
-      
-      // Sign in if not already
+
       if (!isSignedIn()) {
         await signIn()
       }
 
-      // Load backup
       const result = await loadFromGoogleDrive()
       if (!result) {
         toast.error('No backup found on Google Drive')
@@ -308,7 +289,6 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
     setClientIdValue('')
     setShowClientIdInput(false)
     toast.success('Google Client ID saved')
-    // Now trigger the restore flow again
     handleGoogleRestore()
   }
 
@@ -319,17 +299,17 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
       exit={{ opacity: 0, x: -20 }}
     >
       {/* Features */}
-      <div className="card mb-6">
+      <Card className="mb-6">
         <div className="grid grid-cols-2 gap-4">
           {features.map((feature, i) => (
-            <motion.div 
+            <motion.div
               key={feature.title}
               className="flex flex-col items-center text-center p-3"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.1 }}
             >
-              <div className="w-12 h-12 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center mb-2">
+              <div className="w-12 h-12 rounded-[var(--radius-xl)] bg-[var(--color-accent-muted)] flex items-center justify-center mb-2">
                 <feature.icon className="w-6 h-6 text-[var(--color-accent)]" />
               </div>
               <h3 className="text-[13px] font-semibold text-[var(--color-text-primary)]">{feature.title}</h3>
@@ -337,12 +317,12 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
             </motion.div>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Import options */}
-      <div className="card mb-4">
+      <Card className="mb-4">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-11 h-11 rounded-xl bg-[var(--color-success-muted)] flex items-center justify-center">
+          <div className="w-11 h-11 rounded-[var(--radius-xl)] bg-[var(--color-success-muted)] flex items-center justify-center">
             {importSuccess ? (
               <Check className="w-5 h-5 text-[var(--color-success)]" />
             ) : (
@@ -358,93 +338,77 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
             </p>
           </div>
         </div>
-        
+
         {/* Google Drive restore */}
-        <button 
+        <Button
+          variant="primary"
+          icon={googleLoading ? undefined : Cloud}
+          loading={googleLoading}
           onClick={handleGoogleRestore}
           disabled={isImporting || importSuccess || googleLoading}
-          className="btn w-full mb-3 text-white"
+          className="w-full mb-3"
           style={{ backgroundColor: '#4285f4' }}
         >
-          {googleLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Connecting...
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <Cloud className="w-4 h-4" />
-              Restore from Google Drive
-            </span>
-          )}
-        </button>
+          {googleLoading ? 'Connecting...' : 'Restore from Google Drive'}
+        </Button>
 
-        {/* Client ID setup (shown when not configured) */}
-        {showClientIdInput && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mb-3 p-3 rounded-xl bg-[var(--color-bg-muted)] border border-[var(--color-border)]"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Key className="w-4 h-4 text-[var(--color-text-muted)]" />
-              <p className="text-[12px] font-medium text-[var(--color-text-primary)]">Google Client ID Required</p>
-            </div>
-            <p className="text-[11px] text-[var(--color-text-muted)] mb-3">
-              Enter your Google OAuth Client ID to connect to Google Drive.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={clientIdValue}
-                onChange={(e) => setClientIdValue(e.target.value)}
-                placeholder="Your Client ID..."
-                className="input flex-1 text-[13px]"
-              />
-              <button
-                onClick={handleSaveClientId}
-                disabled={!clientIdValue.trim()}
-                className="btn btn-primary"
-              >
-                Save
-              </button>
-            </div>
-          </motion.div>
-        )}
+        {/* Client ID setup */}
+        <AnimatePresence>
+          {showClientIdInput && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-3 p-3 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)] border border-[var(--color-border)]"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="w-4 h-4 text-[var(--color-text-muted)]" />
+                <p className="text-[12px] font-medium text-[var(--color-text-primary)]">Google Client ID Required</p>
+              </div>
+              <p className="text-[11px] text-[var(--color-text-muted)] mb-3">
+                Enter your Google OAuth Client ID to connect to Google Drive.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={clientIdValue}
+                  onChange={(e) => setClientIdValue(e.target.value)}
+                  placeholder="Your Client ID..."
+                  containerClassName="flex-1"
+                  size="sm"
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveClientId}
+                  disabled={!clientIdValue.trim()}
+                >
+                  Save
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Local JSON import */}
-        <button 
+        <Button
+          variant="secondary"
+          icon={importSuccess ? Check : Upload}
           onClick={() => fileInputRef.current?.click()}
           disabled={isImporting || importSuccess}
-          className="btn btn-secondary w-full"
+          loading={isImporting}
+          className="w-full"
         >
-          {isImporting ? (
-            <span className="flex items-center gap-2">
-              <motion.div 
-                className="w-4 h-4 border-2 border-current border-t-transparent rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              />
-              Importing...
-            </span>
-          ) : importSuccess ? (
-            <span className="flex items-center gap-2">
-              <Check className="w-4 h-4" /> Imported
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Upload className="w-4 h-4" /> Load JSON File
-            </span>
-          )}
-        </button>
-        <input 
+          {importSuccess ? 'Imported' : isImporting ? 'Importing...' : 'Load JSON File'}
+        </Button>
+        <input
           ref={fileInputRef}
-          type="file" 
+          type="file"
           accept=".json"
           onChange={onImport}
           className="hidden"
         />
-      </div>
+      </Card>
 
       {/* Divider */}
       <div className="flex items-center gap-4 py-2 mb-4">
@@ -454,25 +418,27 @@ function WelcomeStep({ onNext, onImport, onDemo, onGoogleRestore, isImporting, i
       </div>
 
       {/* Continue to setup */}
-      <button 
+      <Button
+        variant="primary"
+        icon={Sparkles}
+        iconRight={ArrowRight}
         onClick={onNext}
         disabled={isImporting}
-        className="btn btn-primary w-full py-4"
+        className="w-full py-4"
       >
-        <Sparkles className="w-4 h-4" />
         Set Up New
-        <ArrowRight className="w-4 h-4" />
-      </button>
+      </Button>
 
       {/* Try Demo */}
-      <button 
+      <Button
+        variant="ghost"
+        icon={Play}
         onClick={onDemo}
         disabled={isImporting}
-        className="btn btn-ghost w-full py-3 mt-3"
+        className="w-full py-3 mt-3"
       >
-        <Play className="w-4 h-4" />
         Try Demo with Sample Data
-      </button>
+      </Button>
     </motion.div>
   )
 }
@@ -486,7 +452,7 @@ function CurrencyStep({ selectedCurrency, onSelectCurrency, onBack, onNext }) {
       exit={{ opacity: 0, x: -20 }}
     >
       <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center mx-auto mb-3">
+        <div className="w-14 h-14 rounded-[var(--radius-xl)] bg-[var(--color-accent-muted)] flex items-center justify-center mx-auto mb-3">
           <Globe className="w-7 h-7 text-[var(--color-accent)]" />
         </div>
         <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Choose Currency</h2>
@@ -496,14 +462,14 @@ function CurrencyStep({ selectedCurrency, onSelectCurrency, onBack, onNext }) {
       </div>
 
       {/* Currency Grid */}
-      <div className="card mb-4" style={{ padding: 0, maxHeight: '320px', overflowY: 'auto' }}>
+      <Card padding={false} className="mb-4 max-h-[320px] overflow-y-auto">
         {currencies.map((currency, i) => (
           <button
             key={currency.code}
             onClick={() => onSelectCurrency(currency)}
             className={`w-full flex items-center gap-4 p-4 text-left transition-colors ${
-              selectedCurrency?.code === currency.code 
-                ? 'bg-[var(--color-accent-muted)]' 
+              selectedCurrency?.code === currency.code
+                ? 'bg-[var(--color-accent-muted)]'
                 : 'hover:bg-[var(--color-bg-hover)]'
             } ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}
           >
@@ -518,22 +484,22 @@ function CurrencyStep({ selectedCurrency, onSelectCurrency, onBack, onNext }) {
             )}
           </button>
         ))}
-      </div>
+      </Card>
 
       {/* Navigation */}
       <div className="flex gap-3">
-        <button onClick={onBack} className="btn btn-secondary flex-1">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="secondary" icon={ArrowLeft} onClick={onBack} className="flex-1">
           Back
-        </button>
-        <button 
+        </Button>
+        <Button
+          variant="primary"
+          iconRight={ArrowRight}
           onClick={onNext}
           disabled={!selectedCurrency}
-          className="btn btn-primary flex-1 py-3"
+          className="flex-1 py-3"
         >
           Continue
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </motion.div>
   )
@@ -551,10 +517,9 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
 
   const handleAddBudget = () => {
     if (!amount) return
-    
+
     if (isCustom) {
       if (!customCategoryName.trim()) return
-      // Create a custom category ID from the name
       const customId = 'custom_' + customCategoryName.toLowerCase().replace(/\s+/g, '_')
       onUpdateBudget(customId, parseFloat(amount), customCategoryName.trim(), randomColor())
       setCustomCategoryName('')
@@ -576,7 +541,7 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
       exit={{ opacity: 0, x: -20 }}
     >
       <div className="text-center mb-6">
-        <div className="w-14 h-14 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center mx-auto mb-3">
+        <div className="w-14 h-14 rounded-[var(--radius-xl)] bg-[var(--color-accent-muted)] flex items-center justify-center mx-auto mb-3">
           <PiggyBank className="w-7 h-7 text-[var(--color-accent)]" />
         </div>
         <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Set Your Budgets</h2>
@@ -586,44 +551,58 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
       </div>
 
       {/* Add budget form */}
-      <div className="card mb-4">
+      <Card className="mb-4">
         {/* Toggle between predefined and custom */}
         <div className="flex gap-2 mb-4">
-          <button
+          <Button
+            variant={!isCustom ? 'primary' : 'secondary'}
             onClick={() => setIsCustom(false)}
-            className={`btn flex-1 ${!isCustom ? 'btn-primary' : 'btn-secondary'}`}
+            className="flex-1"
           >
             Predefined
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={isCustom ? 'primary' : 'secondary'}
+            icon={Edit3}
             onClick={() => setIsCustom(true)}
-            className={`btn flex-1 ${isCustom ? 'btn-primary' : 'btn-secondary'}`}
+            className="flex-1"
           >
-            <Edit3 className="w-4 h-4" />
             Custom
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-3 mb-3">
           {isCustom ? (
-            <input
+            <Input
               type="text"
               value={customCategoryName}
               onChange={(e) => setCustomCategoryName(e.target.value)}
               placeholder="Enter category name..."
-              className="input"
             />
           ) : (
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="input"
-            >
-              <option value="">Select category...</option>
-              {availableCategories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="
+                  w-full bg-[var(--color-bg-input)] border border-[var(--color-border)]
+                  rounded-[var(--radius-lg)] text-[var(--color-text-primary)]
+                  px-3.5 py-2.5 text-sm appearance-none cursor-pointer
+                  transition-all duration-[var(--transition-fast)]
+                  focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-muted)]
+                "
+              >
+                <option value="">Select category...</option>
+                {availableCategories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-muted)]">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           )}
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -637,37 +616,45 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
                 placeholder="0.00"
                 step="0.01"
                 min="0"
-                className="input"
+                className="
+                  w-full bg-[var(--color-bg-input)] border border-[var(--color-border)]
+                  rounded-[var(--radius-lg)] text-[var(--color-text-primary)]
+                  py-2.5 text-sm
+                  transition-all duration-[var(--transition-fast)]
+                  focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-muted)]
+                "
                 style={{ paddingLeft: currencySymbol.length > 1 ? '2.5rem' : '2rem' }}
               />
             </div>
-            <button
+            <Button
+              variant="primary"
+              icon={Plus}
               onClick={handleAddBudget}
               disabled={!amount || (isCustom ? !customCategoryName.trim() : !selectedCategory)}
-              className="btn btn-primary"
             >
-              <Plus className="w-4 h-4" />
               Add
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Quick amounts */}
         <div className="flex gap-2 flex-wrap">
           {[100, 250, 500, 1000].map(val => (
-            <button
+            <Button
               key={val}
+              variant="ghost"
+              size="sm"
               onClick={() => setAmount(val.toString())}
-              className={`btn btn-ghost text-[12px] py-1 px-3 ${amount === val.toString() ? 'bg-[var(--color-bg-hover)]' : ''}`}
+              className={amount === val.toString() ? 'bg-[var(--color-bg-hover)]' : ''}
             >
               {currencySymbol}{val}
-            </button>
+            </Button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Budget list */}
-      <div className="card mb-4" style={{ padding: 0, maxHeight: '240px', overflowY: 'auto' }}>
+      <Card padding={false} className="mb-4 max-h-[240px] overflow-y-auto">
         {usedCategoryIds.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-[var(--color-text-muted)] text-[13px]">No budgets added yet</p>
@@ -680,10 +667,10 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
               const name = typeof budgetData === 'object' ? budgetData.name : (expenseCategories.find(c => c.id === catId)?.name || catId)
               const color = typeof budgetData === 'object' ? budgetData.color : (expenseCategories.find(c => c.id === catId)?.color || '#94918b')
               const budgetAmount = typeof budgetData === 'object' ? budgetData.amount : budgetData
-              
+
               return (
                 <div key={catId} className={`flex items-center gap-3 p-3 ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+                  <div className="w-9 h-9 rounded-[var(--radius-lg)] flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
                     <span className="text-[14px] font-bold" style={{ color }}>{currencySymbol}</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -692,22 +679,24 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
                   <span className="font-mono text-[14px] text-[var(--color-accent)]">
                     {currencySymbol}{budgetAmount.toFixed(2)}
                   </span>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 text-[var(--color-danger)]"
                     onClick={() => onRemoveBudget(catId)}
-                    className="btn btn-ghost p-2 text-[var(--color-danger)]"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               )
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Total */}
       {usedCategoryIds.length > 0 && (
-        <div className="flex items-center justify-between py-3 px-4 mb-4 rounded-xl bg-[var(--color-bg-muted)]">
+        <div className="flex items-center justify-between py-3 px-4 mb-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)]">
           <span className="text-[var(--color-text-muted)]">Total Monthly Budget</span>
           <span className="font-mono font-semibold text-lg text-[var(--color-accent)]">{currencySymbol}{totalBudget.toFixed(2)}</span>
         </div>
@@ -715,17 +704,17 @@ function BudgetStep({ budgets, currencySymbol, onUpdateBudget, onRemoveBudget, o
 
       {/* Navigation */}
       <div className="flex gap-3">
-        <button onClick={onBack} className="btn btn-secondary flex-1">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="secondary" icon={ArrowLeft} onClick={onBack} className="flex-1">
           Back
-        </button>
-        <button 
+        </Button>
+        <Button
+          variant="primary"
+          iconRight={ArrowRight}
           onClick={onComplete}
-          className="btn btn-primary flex-1 py-3"
+          className="flex-1 py-3"
         >
           {usedCategoryIds.length === 0 ? 'Skip for Now' : 'Complete Setup'}
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
 
       <p className="text-center text-[11px] text-[var(--color-text-muted)] mt-4">
@@ -740,7 +729,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(1)
   const [isImporting, setIsImporting] = useState(false)
   const [importSuccess, setImportSuccess] = useState(false)
-  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]) // Default CAD
+  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0])
   const [budgets, setBudgets] = useState({})
 
   const handleImport = async (e) => {
@@ -753,8 +742,7 @@ export default function Onboarding() {
       dispatch({ type: 'IMPORT_DATA', payload: data })
       setImportSuccess(true)
       toast.success('Data imported successfully!')
-      
-      // Auto-complete setup after import
+
       setTimeout(() => {
         completeSetup()
       }, 1500)
@@ -766,9 +754,9 @@ export default function Onboarding() {
   }
 
   const handleUpdateBudget = (categoryId, amount, name, color) => {
-    setBudgets(prev => ({ 
-      ...prev, 
-      [categoryId]: { amount, name, color } 
+    setBudgets(prev => ({
+      ...prev,
+      [categoryId]: { amount, name, color }
     }))
   }
 
@@ -780,26 +768,23 @@ export default function Onboarding() {
   }
 
   const handleComplete = () => {
-    // Save currency settings
-    updateSettings({ 
-      currency: selectedCurrency.code, 
-      currencySymbol: selectedCurrency.symbol 
+    updateSettings({
+      currency: selectedCurrency.code,
+      currencySymbol: selectedCurrency.symbol
     })
-    
-    // Save all budgets to context
+
     Object.entries(budgets).forEach(([categoryId, data]) => {
       setBudget(categoryId, data.amount)
     })
-    
-    // Also save custom categories if any
+
     const customCategories = Object.entries(budgets)
       .filter(([id]) => id.startsWith('custom_'))
       .map(([id, data]) => ({ id, name: data.name, color: data.color }))
-    
+
     if (customCategories.length > 0) {
       dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: customCategories })
     }
-    
+
     completeSetup()
     toast.success('Welcome to MoneyTracker!')
   }
@@ -810,14 +795,13 @@ export default function Onboarding() {
     if (data.budgets) dispatch({ type: 'SET_BUDGETS', payload: data.budgets })
     if (data.customCategories) dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: data.customCategories })
     if (data.currency || data.currencySymbol) {
-      updateSettings({ 
-        currency: data.currency || state?.settings?.currency, 
-        currencySymbol: data.currencySymbol || state?.settings?.currencySymbol 
+      updateSettings({
+        currency: data.currency || state?.settings?.currency,
+        currencySymbol: data.currencySymbol || state?.settings?.currencySymbol
       })
     }
-    
+
     setImportSuccess(true)
-    // Auto-complete setup after Google restore
     setTimeout(() => {
       completeSetup()
     }, 1500)
@@ -833,7 +817,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)] flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         className="w-full max-w-lg"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -841,8 +825,8 @@ export default function Onboarding() {
       >
         {/* Logo */}
         <div className="text-center mb-6">
-          <motion.div 
-            className="w-16 h-16 rounded-2xl bg-[var(--color-accent)] flex items-center justify-center mx-auto mb-3"
+          <motion.div
+            className="w-16 h-16 rounded-[var(--radius-2xl)] bg-[var(--color-accent)] flex items-center justify-center mx-auto mb-3"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
@@ -860,9 +844,9 @@ export default function Onboarding() {
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
           {[1, 2, 3].map(s => (
-            <div 
+            <div
               key={s}
-              className={`w-2 h-2 rounded-full transition-colors ${step >= s ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border)]'}`} 
+              className={`w-2 h-2 rounded-full transition-colors ${step >= s ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border)]'}`}
             />
           ))}
         </div>
@@ -870,7 +854,7 @@ export default function Onboarding() {
         {/* Steps */}
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <WelcomeStep 
+            <WelcomeStep
               key="welcome"
               onNext={() => setStep(2)}
               onImport={handleImport}

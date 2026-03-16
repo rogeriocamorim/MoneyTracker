@@ -7,6 +7,7 @@ import { getCategoryById, getAllCategories } from '../data/categories'
 import { formatCurrency, getMonthlyExpenses, getBudgetProgress } from '../utils/calculations'
 import * as LucideIcons from 'lucide-react'
 import BudgetForm from './BudgetForm'
+import { Card, CardHeader, CardTitle, CardBody, Button, Badge, EmptyState } from './ui'
 
 function CategoryIcon({ categoryId, customCategories }) {
   const category = getCategoryById(categoryId, customCategories)
@@ -19,11 +20,11 @@ function ProgressBar({ spent, budget }) {
   const percentage = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0
   const isOver = spent > budget
   const isWarning = percentage >= 80 && !isOver
-  
+
   let color = 'var(--color-accent)'
   if (isOver) color = 'var(--color-danger)'
   else if (isWarning) color = 'var(--color-warning)'
-  
+
   return (
     <div className="h-2 bg-[var(--color-bg-muted)] rounded-full overflow-hidden">
       <motion.div
@@ -79,47 +80,56 @@ export default function BudgetManager() {
           <p className="text-[13px] text-[var(--color-text-muted)]">Total Budget</p>
           <p className="text-3xl font-bold font-mono text-[var(--color-accent)]">{formatCurrency(totalBudget)}</p>
         </div>
-        <button onClick={handleAddNew} className="btn btn-primary">
-          <Plus className="w-4 h-4" /> Add Budget
-        </button>
+        <Button variant="primary" icon={Plus} onClick={handleAddNew}>
+          Add Budget
+        </Button>
       </div>
 
       {/* Summary Card */}
-      <div className="card">
+      <Card>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">Monthly Overview</h3>
-          <span className={`badge ${overallPercentage >= 100 ? 'badge-danger' : overallPercentage >= 80 ? 'badge-warning' : 'badge-success'}`}>
-            {overallPercentage.toFixed(2)}% used
-          </span>
+          <Badge
+            variant={overallPercentage >= 100 ? 'danger' : overallPercentage >= 80 ? 'warning' : 'success'}
+          >
+            {overallPercentage.toFixed(1)}% used
+          </Badge>
         </div>
         <ProgressBar spent={totalSpent} budget={totalBudget} />
         <div className="flex justify-between mt-3 text-[13px]">
-          <span className="text-[var(--color-text-muted)]">Spent: <span className="font-mono text-[var(--color-danger)]">{formatCurrency(totalSpent)}</span></span>
-          <span className="text-[var(--color-text-muted)]">Remaining: <span className="font-mono text-[var(--color-success)]">{formatCurrency(Math.max(0, totalBudget - totalSpent))}</span></span>
+          <span className="text-[var(--color-text-muted)]">
+            Spent: <span className="font-mono text-[var(--color-danger)]">{formatCurrency(totalSpent)}</span>
+          </span>
+          <span className="text-[var(--color-text-muted)]">
+            Remaining: <span className="font-mono text-[var(--color-success)]">{formatCurrency(Math.max(0, totalBudget - totalSpent))}</span>
+          </span>
         </div>
-      </div>
+      </Card>
 
       {/* Budget List */}
-      <div className="card" style={{ padding: 0 }}>
+      <Card padding={false}>
         {budgetProgress.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-muted)] flex items-center justify-center mx-auto mb-4">
-              <Target className="w-8 h-8 text-[var(--color-text-muted)]" />
-            </div>
-            <p className="text-[var(--color-text-muted)] mb-2">No budgets set</p>
-            <p className="text-[13px] text-[var(--color-text-muted)]">Click "Add Budget" to get started</p>
-          </div>
+          <EmptyState
+            icon={Target}
+            title="No budgets set"
+            description='Click "Add Budget" to set monthly spending limits for your categories.'
+            action={handleAddNew}
+            actionLabel="Add Budget"
+          />
         ) : (
           <div>
             {budgetProgress.map((item, i) => {
               const category = getCategoryById(item.category, state.customCategories)
               const isOver = item.spent > item.budget
               const isWarning = item.percentage >= 80 && !isOver
-              
+
               return (
                 <div key={item.category} className={`p-4 group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
                   <div className="flex items-center gap-4 mb-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#94918b'}15` }}>
+                    <div
+                      className="w-11 h-11 rounded-[var(--radius-xl)] flex items-center justify-center"
+                      style={{ backgroundColor: `${category?.color || '#94918b'}15` }}
+                    >
                       <CategoryIcon categoryId={item.category} customCategories={state.customCategories} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -137,11 +147,27 @@ export default function BudgetManager() {
                       </div>
                     </div>
                     <span className={`font-mono font-semibold ${isOver ? 'text-[var(--color-danger)]' : isWarning ? 'text-[var(--color-warning)]' : 'text-[var(--color-success)]'}`}>
-                      {item.percentage.toFixed(2)}%
+                      {item.percentage.toFixed(1)}%
                     </span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(item.category)} className="btn btn-ghost p-2"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(item.category)} className="btn btn-danger p-2"><Trash2 className="w-4 h-4" /></button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-1.5"
+                        onClick={() => handleEdit(item.category)}
+                        title="Edit budget"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="p-1.5"
+                        onClick={() => handleDelete(item.category)}
+                        title="Delete budget"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                   <ProgressBar spent={item.spent} budget={item.budget} />
@@ -150,7 +176,7 @@ export default function BudgetManager() {
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       <AnimatePresence>{showForm && <BudgetForm budget={editingBudget} onClose={handleCloseForm} />}</AnimatePresence>
     </motion.div>

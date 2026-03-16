@@ -1,39 +1,14 @@
 import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, Tag, CreditCard, Landmark } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Tag, CreditCard, Landmark, Receipt } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { getCategoryById, getPaymentMethodById, getAllCategories, paymentMethods } from '../data/categories'
 import { formatCurrency, getMonthlyExpenses, getTotal } from '../utils/calculations'
 import ExpenseForm from './ExpenseForm'
-import * as LucideIcons from 'lucide-react'
-
-function CategoryIcon({ categoryId, customCategories }) {
-  const category = getCategoryById(categoryId, customCategories)
-  if (!category) return null
-  const Icon = LucideIcons[category.icon] || Tag
-  return Icon ? <Icon className="w-5 h-5" style={{ color: category.color }} /> : null
-}
-
-function PaymentBadge({ methodId }) {
-  const method = getPaymentMethodById(methodId)
-  if (!method) return null
-  
-  const Icon = methodId === 'bank' ? Landmark : CreditCard
-  const bgColor = methodId === 'bank' ? 'rgba(99, 102, 241, 0.1)' : methodId === 'visa' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(225, 29, 72, 0.1)'
-  const textColor = methodId === 'bank' ? '#6366f1' : methodId === 'visa' ? '#4f46e5' : '#e11d48'
-  
-  return (
-    <span 
-      className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full"
-      style={{ backgroundColor: bgColor, color: textColor }}
-    >
-      <Icon className="w-3 h-3" />
-      {method.name.split(' ')[0]}
-    </span>
-  )
-}
+import { Card, Button, Input, Select, EmptyState, DataTable, Badge } from './ui'
 
 export default function ExpenseList() {
   const { state, deleteExpense } = useMoney()
@@ -51,7 +26,7 @@ export default function ExpenseList() {
     const [year, month] = selectedMonth.split('-').map(Number)
     expenses = getMonthlyExpenses(expenses, new Date(year, month - 1, 1))
     if (searchTerm) {
-      expenses = expenses.filter(e => 
+      expenses = expenses.filter(e =>
         e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getCategoryById(e.category, state.customCategories)?.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
@@ -72,6 +47,115 @@ export default function ExpenseList() {
   const handleCloseForm = () => { setShowForm(false); setEditingExpense(null) }
   const handleDelete = (id) => { if (confirm('Delete this expense?')) { deleteExpense(id); toast.success('Deleted') } }
 
+  const categoryOptions = useMemo(() => [
+    { value: '', label: 'All Categories' },
+    ...allCategories.map(cat => ({ value: cat.id, label: cat.name })),
+  ], [allCategories])
+
+  const paymentOptions = useMemo(() => [
+    { value: '', label: 'All Payments' },
+    ...paymentMethods.map(m => ({ value: m.id, label: m.name })),
+  ], [])
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'category',
+      header: 'Category',
+      cell: ({ row }) => {
+        const expense = row.original
+        const category = getCategoryById(expense.category, state.customCategories)
+        const Icon = LucideIcons[category?.icon] || Tag
+        return (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-[var(--radius-lg)] flex items-center justify-center"
+              style={{ backgroundColor: `${category?.color || '#94918b'}15` }}
+            >
+              <Icon className="w-4 h-4" style={{ color: category?.color }} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium text-[var(--color-text-primary)] truncate">{category?.name}</p>
+              {expense.description && (
+                <p className="text-xs text-[var(--color-text-muted)] truncate">{expense.description}</p>
+              )}
+            </div>
+          </div>
+        )
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'date',
+      header: 'Date',
+      cell: ({ row }) => (
+        <span className="text-sm text-[var(--color-text-secondary)] whitespace-nowrap">
+          {format(parseISO(row.original.date), 'MMM d, yyyy')}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'paymentMethod',
+      header: 'Payment',
+      cell: ({ row }) => {
+        const method = getPaymentMethodById(row.original.paymentMethod)
+        if (!method) return null
+        const Icon = row.original.paymentMethod === 'bank' ? Landmark : CreditCard
+        return (
+          <Badge
+            variant="default"
+            size="sm"
+            className="whitespace-nowrap"
+            style={{
+              backgroundColor: `${method.color}15`,
+              color: method.color,
+            }}
+          >
+            <Icon className="w-3 h-3" />
+            {method.name.split(' ')[0]}
+          </Badge>
+        )
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Amount',
+      cell: ({ row }) => (
+        <span className="font-mono font-semibold text-[var(--color-danger)] whitespace-nowrap">
+          -{formatCurrency(row.original.amount)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex gap-1 sm:opacity-0 sm:group-hover/row:opacity-100 transition-opacity justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-1.5"
+            onClick={(e) => { e.stopPropagation(); handleEdit(row.original) }}
+            title="Edit expense"
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            className="p-1.5"
+            onClick={(e) => { e.stopPropagation(); handleDelete(row.original.id) }}
+            title="Delete expense"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+      enableSorting: false,
+      size: 100,
+    },
+  ], [state.customCategories])
+
   return (
     <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       {/* Header */}
@@ -80,65 +164,73 @@ export default function ExpenseList() {
           <p className="text-[13px] text-[var(--color-text-muted)]">Total Spent</p>
           <p className="text-3xl font-bold font-mono text-[var(--color-danger)]">{formatCurrency(totalExpenses)}</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn btn-primary">
-          <Plus className="w-4 h-4" /> Add Expense
-        </button>
+        <Button variant="primary" icon={Plus} onClick={() => setShowForm(true)}>
+          Add Expense
+        </Button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="input" style={{ width: 'auto' }} />
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
-          <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input pl-10" />
-        </div>
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="input" style={{ width: 'auto' }}>
-          <option value="">All Categories</option>
-          {allCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-        </select>
-        <select value={filterPayment} onChange={(e) => setFilterPayment(e.target.value)} className="input" style={{ width: 'auto' }}>
-          <option value="">All Payments</option>
-          {paymentMethods.map(method => <option key={method.id} value={method.id}>{method.name}</option>)}
-        </select>
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="
+            bg-[var(--color-bg-input)] border border-[var(--color-border)]
+            rounded-[var(--radius-lg)] text-[var(--color-text-primary)]
+            px-3.5 py-2.5 text-sm
+            transition-all duration-[var(--transition-fast)]
+            focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-muted)]
+          "
+          style={{ width: 'auto' }}
+        />
+        <Input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          icon={Search}
+          containerClassName="flex-1 min-w-[200px]"
+        />
+        <Select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          options={categoryOptions}
+          placeholder=""
+          className="w-auto"
+          containerClassName="w-auto"
+        />
+        <Select
+          value={filterPayment}
+          onChange={(e) => setFilterPayment(e.target.value)}
+          options={paymentOptions}
+          placeholder=""
+          className="w-auto"
+          containerClassName="w-auto"
+        />
       </div>
 
-      {/* List */}
-      <div className="card" style={{ padding: 0 }}>
+      {/* Expense Table */}
+      <Card padding={false}>
         {filteredExpenses.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-[var(--color-text-muted)]">No expenses found</p>
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title="No expenses found"
+            description="Try adjusting your filters or add a new expense."
+            action={() => setShowForm(true)}
+            actionLabel="Add Expense"
+          />
         ) : (
-          <div>
-            {filteredExpenses.map((expense, i) => {
-              const category = getCategoryById(expense.category, state.customCategories)
-              return (
-                <div key={expense.id} className={`flex items-center gap-4 p-4 hover:bg-[var(--color-bg-hover)] transition-colors group ${i !== 0 ? 'border-t border-[var(--color-border)]' : ''}`}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${category?.color || '#94918b'}15` }}>
-                    <CategoryIcon categoryId={expense.category} customCategories={state.customCategories} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[var(--color-text-primary)] truncate">{category?.name}</p>
-                    {expense.description && (
-                      <p className="text-[12px] text-[var(--color-text-muted)] truncate">{expense.description}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[12px] text-[var(--color-text-muted)]">{format(parseISO(expense.date), 'MMM d, yyyy')}</span>
-                      <span className="text-[var(--color-text-muted)]">•</span>
-                      <PaymentBadge methodId={expense.paymentMethod} />
-                    </div>
-                  </div>
-                  <p className="font-mono font-semibold text-[var(--color-danger)]">-{formatCurrency(expense.amount)}</p>
-                  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(expense)} className="btn btn-ghost p-2" title="Edit expense"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(expense.id)} className="btn btn-danger p-2" title="Delete expense"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <DataTable
+            data={filteredExpenses}
+            columns={columns}
+            enablePagination={filteredExpenses.length > 10}
+            pageSize={10}
+            enableSorting
+            className="[&_tr]:group/row"
+          />
         )}
-      </div>
+      </Card>
 
       <AnimatePresence>{showForm && <ExpenseForm expense={editingExpense} onClose={handleCloseForm} />}</AnimatePresence>
     </motion.div>

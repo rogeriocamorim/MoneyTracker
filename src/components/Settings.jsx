@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Download, 
-  Upload, 
-  Trash2, 
-  Globe, 
-  Database, 
-  AlertTriangle, 
-  Check, 
-  Cloud, 
+import {
+  Download,
+  Upload,
+  Trash2,
+  Globe,
+  Database,
+  AlertTriangle,
+  Check,
+  Cloud,
   CloudOff,
   RefreshCw,
   Settings as SettingsIcon,
@@ -20,17 +20,19 @@ import toast from 'react-hot-toast'
 import { useMoney } from '../context/MoneyContext'
 import { exportData, importData } from '../utils/storage'
 import { APP_VERSION, CHANGELOG } from '../data/version'
-import { 
-  initGoogleApi, 
-  isSignedIn, 
-  signIn, 
-  signOut, 
-  saveToGoogleDrive, 
+import {
+  initGoogleApi,
+  isSignedIn,
+  signIn,
+  signOut,
+  saveToGoogleDrive,
   loadFromGoogleDrive,
   getBackupInfo,
   setClientId,
   hasClientId
 } from '../utils/googleDrive'
+import { Card, Button, Input } from './ui'
+import { Toggle } from './ui/Toggle'
 
 function ChangelogSection() {
   const [isOpen, setIsOpen] = useState(false)
@@ -102,7 +104,7 @@ export default function Settings() {
   const { state, syncStatus, dispatch, updateSettings } = useMoney()
   const fileInputRef = useRef(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  
+
   // Google Drive state
   const [googleConnected, setGoogleConnected] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -158,7 +160,6 @@ export default function Settings() {
     signOut()
     setGoogleConnected(false)
     setBackupInfo(null)
-    // Disable auto-sync when disconnecting
     if (state.settings?.autoSyncEnabled) {
       updateSettings({ autoSyncEnabled: false })
     }
@@ -196,13 +197,13 @@ export default function Settings() {
         toast.error('No backup found on Google Drive')
         return
       }
-      
+
       const { data } = result
       if (data.expenses) dispatch({ type: 'SET_EXPENSES', payload: data.expenses })
       if (data.income) dispatch({ type: 'SET_INCOME', payload: data.income })
       if (data.budgets) dispatch({ type: 'SET_BUDGETS', payload: data.budgets })
       if (data.customCategories) dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: data.customCategories })
-      
+
       toast.success('Loaded from Google Drive')
     } catch (err) {
       console.error('Load from Google error:', err)
@@ -268,9 +269,9 @@ export default function Settings() {
       </div>
 
       {/* Currency */}
-      <div className="card">
+      <Card>
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[var(--color-accent-muted)]">
+          <div className="w-11 h-11 rounded-[var(--radius-xl)] flex items-center justify-center bg-[var(--color-accent-muted)]">
             <Globe className="w-5 h-5 text-[var(--color-accent)]" />
           </div>
           <div>
@@ -278,16 +279,16 @@ export default function Settings() {
             <p className="text-[13px] text-[var(--color-text-muted)]">Display format for amounts</p>
           </div>
         </div>
-        <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-[var(--color-bg-muted)]">
+        <div className="flex items-center justify-between py-3 px-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)]">
           <span className="text-[var(--color-text-secondary)]">Canadian Dollar</span>
           <span className="font-mono font-semibold text-[var(--color-accent)]">CAD $</span>
         </div>
-      </div>
+      </Card>
 
       {/* Data Storage */}
-      <div className="card">
+      <Card>
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[var(--color-success-muted)]">
+          <div className="w-11 h-11 rounded-[var(--radius-xl)] flex items-center justify-center bg-[var(--color-success-muted)]">
             <Database className="w-5 h-5 text-[var(--color-success)]" />
           </div>
           <div>
@@ -295,37 +296,37 @@ export default function Settings() {
             <p className="text-[13px] text-[var(--color-text-muted)]">Your data is stored locally in this browser</p>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="text-center py-3 px-4 rounded-xl bg-[var(--color-bg-muted)]">
+          <div className="text-center py-3 px-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)]">
             <p className="text-2xl font-bold font-mono text-[var(--color-danger)]">{stats.expenses}</p>
             <p className="text-[12px] text-[var(--color-text-muted)]">Expenses</p>
           </div>
-          <div className="text-center py-3 px-4 rounded-xl bg-[var(--color-bg-muted)]">
+          <div className="text-center py-3 px-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)]">
             <p className="text-2xl font-bold font-mono text-[var(--color-success)]">{stats.income}</p>
             <p className="text-[12px] text-[var(--color-text-muted)]">Income</p>
           </div>
-          <div className="text-center py-3 px-4 rounded-xl bg-[var(--color-bg-muted)]">
+          <div className="text-center py-3 px-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)]">
             <p className="text-2xl font-bold font-mono text-[var(--color-accent)]">{stats.budgets}</p>
             <p className="text-[12px] text-[var(--color-text-muted)]">Budgets</p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <button onClick={handleExport} className="btn btn-secondary w-full">
-            <Download className="w-4 h-4" /> Export Data (JSON)
-          </button>
-          <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary w-full">
-            <Upload className="w-4 h-4" /> Import Data
-          </button>
+          <Button variant="secondary" icon={Download} onClick={handleExport} className="w-full">
+            Export Data (JSON)
+          </Button>
+          <Button variant="secondary" icon={Upload} onClick={() => fileInputRef.current?.click()} className="w-full">
+            Import Data
+          </Button>
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
         </div>
-      </div>
+      </Card>
 
       {/* Google Drive */}
-      <div className="card">
+      <Card>
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#4285f4]/10">
+          <div className="w-11 h-11 rounded-[var(--radius-xl)] flex items-center justify-center bg-[#4285f4]/10">
             <Cloud className="w-5 h-5 text-[#4285f4]" />
           </div>
           <div className="flex-1">
@@ -343,106 +344,97 @@ export default function Settings() {
         </div>
 
         {!clientIdConfigured ? (
-          // Client ID Setup
+          /* Client ID Setup */
           <div className="space-y-3">
             {!showClientIdSetup ? (
               <>
-                <div className="p-4 rounded-xl bg-[var(--color-bg-muted)] border border-[var(--color-border)]">
+                <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)] border border-[var(--color-border)]">
                   <p className="text-[13px] text-[var(--color-text-secondary)] mb-3">
                     To use Google Drive backup, you need to set up a Google Cloud project with OAuth credentials.
                   </p>
-                  <a 
-                    href="https://console.cloud.google.com/apis/credentials" 
-                    target="_blank" 
+                  <a
+                    href="https://console.cloud.google.com/apis/credentials"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-[13px] text-[var(--color-accent)] hover:underline inline-flex items-center gap-1"
                   >
                     Google Cloud Console <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-                <button 
-                  onClick={() => setShowClientIdSetup(true)} 
-                  className="btn btn-secondary w-full"
+                <Button
+                  variant="secondary"
+                  icon={SettingsIcon}
+                  onClick={() => setShowClientIdSetup(true)}
+                  className="w-full"
                 >
-                  <SettingsIcon className="w-4 h-4" /> Configure Google Client ID
-                </button>
+                  Configure Google Client ID
+                </Button>
               </>
             ) : (
               <div className="space-y-3">
-                <div className="p-4 rounded-xl bg-[var(--color-bg-muted)] text-[12px] text-[var(--color-text-muted)] space-y-2">
+                <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)] text-[12px] text-[var(--color-text-muted)] space-y-2">
                   <p className="font-medium text-[var(--color-text-secondary)]">Setup Instructions:</p>
                   <ol className="list-decimal list-inside space-y-1">
                     <li>Go to Google Cloud Console → APIs & Services → Credentials</li>
                     <li>Create OAuth 2.0 Client ID (Web application)</li>
-                    <li>Add <code className="px-1 py-0.5 rounded bg-[var(--color-bg-base)] font-mono text-[11px]">{window.location.origin}</code> to authorized JavaScript origins</li>
+                    <li>Add <code className="px-1 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-bg-base)] font-mono text-[11px]">{window.location.origin}</code> to authorized JavaScript origins</li>
                     <li>Copy the Client ID and paste below</li>
                   </ol>
                 </div>
-                <input 
+                <Input
                   type="text"
                   value={clientIdInput}
                   onChange={(e) => setClientIdInput(e.target.value)}
                   placeholder="Enter Google Client ID (*.apps.googleusercontent.com)"
-                  className="input w-full font-mono text-[12px]"
+                  className="font-mono text-[12px]"
                 />
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setShowClientIdSetup(false)} className="btn btn-secondary">
+                  <Button variant="secondary" onClick={() => setShowClientIdSetup(false)}>
                     Cancel
-                  </button>
-                  <button 
-                    onClick={handleSaveClientId} 
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveClientId}
                     disabled={!clientIdInput.trim()}
-                    className="btn btn-primary"
                   >
                     Save Client ID
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
         ) : !googleConnected ? (
-          // Not connected - show connect button
-          <button 
-            onClick={handleGoogleConnect} 
+          /* Not connected - show connect button */
+          <Button
+            variant="primary"
+            icon={googleLoading ? Loader2 : Cloud}
+            onClick={handleGoogleConnect}
             disabled={googleLoading}
-            className="btn btn-primary w-full"
+            loading={googleLoading}
+            className="w-full"
           >
-            {googleLoading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Connecting...</>
-            ) : (
-              <><Cloud className="w-4 h-4" /> Connect to Google Drive</>
-            )}
-          </button>
+            {googleLoading ? 'Connecting...' : 'Connect to Google Drive'}
+          </Button>
         ) : (
-          // Connected - show sync options
+          /* Connected - show sync options */
           <div className="space-y-3">
             {/* Auto-sync toggle */}
-            <div className="p-3 rounded-xl bg-[var(--color-bg-muted)] flex items-center justify-between">
+            <div className="p-3 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)] flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[13px] font-medium text-[var(--color-text-primary)]">Auto-sync</p>
                 <p className="text-[12px] text-[var(--color-text-muted)]">
                   Automatically sync changes to Google Drive
                 </p>
               </div>
-              <button
-                onClick={() => updateSettings({ autoSyncEnabled: !state.settings?.autoSyncEnabled })}
-                className={`relative w-11 h-6 rounded-full transition-colors ${
-                  state.settings?.autoSyncEnabled 
-                    ? 'bg-[var(--color-accent)]' 
-                    : 'bg-[var(--color-border)]'
-                }`}
-              >
-                <span 
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                    state.settings?.autoSyncEnabled ? 'left-6' : 'left-1'
-                  }`} 
-                />
-              </button>
+              <Toggle
+                checked={!!state.settings?.autoSyncEnabled}
+                onChange={(val) => updateSettings({ autoSyncEnabled: val })}
+              />
             </div>
 
             {/* Sync status */}
             {(syncStatus.isSyncing || syncStatus.lastSyncTime || backupInfo) && (
-              <div className="p-3 rounded-xl bg-[var(--color-bg-muted)] flex items-center justify-between">
+              <div className="p-3 rounded-[var(--radius-xl)] bg-[var(--color-bg-muted)] flex items-center justify-between">
                 <div>
                   <p className="text-[12px] text-[var(--color-text-muted)]">
                     {syncStatus.isSyncing ? 'Syncing...' : 'Last synced'}
@@ -469,48 +461,44 @@ export default function Settings() {
                 )}
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 gap-2">
-              <button 
-                onClick={handleSaveToGoogle} 
+              <Button
+                variant="primary"
+                icon={googleSyncing ? undefined : Upload}
+                onClick={handleSaveToGoogle}
                 disabled={googleSyncing}
-                className="btn btn-primary"
+                loading={googleSyncing}
               >
-                {googleSyncing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
                 Save to Drive
-              </button>
-              <button 
-                onClick={handleLoadFromGoogle} 
+              </Button>
+              <Button
+                variant="secondary"
+                icon={googleSyncing ? undefined : Download}
+                onClick={handleLoadFromGoogle}
                 disabled={googleSyncing}
-                className="btn btn-secondary"
+                loading={googleSyncing}
               >
-                {googleSyncing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
                 Load from Drive
-              </button>
+              </Button>
             </div>
-            
-            <button 
+
+            <Button
+              variant="secondary"
+              icon={CloudOff}
               onClick={handleGoogleDisconnect}
-              className="btn btn-secondary w-full text-[var(--color-danger)]"
+              className="w-full text-[var(--color-danger)]"
             >
-              <CloudOff className="w-4 h-4" /> Disconnect Google Drive
-            </button>
+              Disconnect Google Drive
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Danger Zone */}
-      <div className="card" style={{ borderColor: 'var(--color-danger)', borderWidth: '1px' }}>
+      <Card className="border border-[var(--color-danger)]">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[var(--color-danger-muted)]">
+          <div className="w-11 h-11 rounded-[var(--radius-xl)] flex items-center justify-center bg-[var(--color-danger-muted)]">
             <AlertTriangle className="w-5 h-5 text-[var(--color-danger)]" />
           </div>
           <div>
@@ -518,30 +506,30 @@ export default function Settings() {
             <p className="text-[13px] text-[var(--color-text-muted)]">Irreversible actions</p>
           </div>
         </div>
-        
+
         {!showDeleteConfirm ? (
-          <button onClick={() => setShowDeleteConfirm(true)} className="btn btn-danger w-full">
-            <Trash2 className="w-4 h-4" /> Reset App & Clear All Data
-          </button>
+          <Button variant="danger" icon={Trash2} onClick={() => setShowDeleteConfirm(true)} className="w-full">
+            Reset App & Clear All Data
+          </Button>
         ) : (
           <div className="space-y-3">
             <p className="text-[13px] text-[var(--color-text-muted)] text-center py-2">
               This will delete all expenses, income, budgets and return to the setup screen.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="btn btn-secondary">
+              <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
                 Cancel
-              </button>
-              <button onClick={handleClearData} className="btn btn-danger">
-                <Check className="w-4 h-4" /> Confirm Reset
-              </button>
+              </Button>
+              <Button variant="danger" icon={Check} onClick={handleClearData}>
+                Confirm Reset
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* About */}
-      <div className="card">
+      <Card>
         <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-3">About</h3>
         <p className="text-[13px] text-[var(--color-text-muted)] leading-relaxed">
           MoneyTracker is a personal finance app that helps you track expenses, income, and budgets.
@@ -559,7 +547,7 @@ export default function Settings() {
 
         {/* Changelog */}
         <ChangelogSection />
-      </div>
+      </Card>
     </motion.div>
   )
 }

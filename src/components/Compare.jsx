@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns'
 import { motion } from 'framer-motion'
-import { 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  TrendingUp,
+  TrendingDown,
   Minus,
   BarChart3,
   ArrowUpRight,
@@ -26,6 +26,7 @@ import {
 import { useMoney } from '../context/MoneyContext'
 import { getCategoryById, getAllCategories } from '../data/categories'
 import { formatCurrency, getTotal, getTotalByCategory } from '../utils/calculations'
+import { Card, Button, Select, Badge, EmptyState } from './ui'
 
 const container = {
   hidden: { opacity: 0 },
@@ -50,7 +51,7 @@ function getExpensesForMonth(expenses, date) {
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="card card-compact" style={{ padding: '12px 16px' }}>
+      <div className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] px-4 py-3">
         <p className="text-[12px] text-[var(--color-text-muted)] mb-2">{label}</p>
         {payload.map((entry, index) => (
           <p key={index} className="text-[13px] font-mono font-medium" style={{ color: entry.color }}>
@@ -66,21 +67,27 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Compare() {
   const { state } = useMoney()
   const [monthsToCompare, setMonthsToCompare] = useState(3)
-  const [startMonth, setStartMonth] = useState(0) // 0 = current month
-  
+  const [startMonth, setStartMonth] = useState(0)
+
   const allCategories = getAllCategories(state.customCategories)
+
+  const monthsOptions = [
+    { value: '3', label: '3 Months' },
+    { value: '6', label: '6 Months' },
+    { value: '12', label: '12 Months' },
+  ]
 
   // Generate month data for comparison
   const monthlyData = useMemo(() => {
     const data = []
     const now = new Date()
-    
+
     for (let i = startMonth + monthsToCompare - 1; i >= startMonth; i--) {
       const monthDate = subMonths(now, i)
       const monthExpenses = getExpensesForMonth(state.expenses, monthDate)
       const categoryTotals = getTotalByCategory(monthExpenses)
       const total = getTotal(monthExpenses)
-      
+
       data.push({
         month: format(monthDate, 'MMM yyyy'),
         shortMonth: format(monthDate, 'MMM'),
@@ -90,7 +97,7 @@ export default function Compare() {
         expenses: monthExpenses,
       })
     }
-    
+
     return data
   }, [state.expenses, monthsToCompare, startMonth])
 
@@ -128,27 +135,6 @@ export default function Compare() {
     }))
   }, [monthlyData])
 
-  // Calculate month-over-month changes
-  const monthChanges = useMemo(() => {
-    if (monthlyData.length < 2) return []
-    
-    const changes = []
-    for (let i = 1; i < monthlyData.length; i++) {
-      const current = monthlyData[i]
-      const previous = monthlyData[i - 1]
-      const diff = current.total - previous.total
-      const percentChange = previous.total > 0 ? ((diff / previous.total) * 100) : 0
-      
-      changes.push({
-        from: previous.shortMonth,
-        to: current.shortMonth,
-        diff,
-        percentChange,
-      })
-    }
-    return changes
-  }, [monthlyData])
-
   const handlePrevious = () => setStartMonth(prev => prev + 1)
   const handleNext = () => setStartMonth(prev => Math.max(0, prev - 1))
 
@@ -165,35 +151,37 @@ export default function Compare() {
             Analyze spending patterns across months
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <button 
+          <Button
+            variant="secondary"
+            size="sm"
+            className="p-2"
             onClick={handlePrevious}
-            className="btn btn-secondary p-2"
             title="Earlier months"
           >
             <ChevronLeft className="w-5 h-5" />
-          </button>
-          
-          <select 
-            value={monthsToCompare}
+          </Button>
+
+          <Select
+            value={monthsToCompare.toString()}
             onChange={(e) => setMonthsToCompare(Number(e.target.value))}
-            className="input"
-            style={{ width: 'auto' }}
-          >
-            <option value={3}>3 Months</option>
-            <option value={6}>6 Months</option>
-            <option value={12}>12 Months</option>
-          </select>
-          
-          <button 
+            options={monthsOptions}
+            placeholder=""
+            containerClassName="w-auto"
+            className="w-auto"
+          />
+
+          <Button
+            variant="secondary"
+            size="sm"
+            className="p-2"
             onClick={handleNext}
             disabled={startMonth === 0}
-            className="btn btn-secondary p-2"
             title="Recent months"
           >
             <ChevronRight className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
       </motion.div>
 
@@ -204,9 +192,9 @@ export default function Compare() {
           const diff = prevMonth ? month.total - prevMonth.total : 0
           const isUp = diff > 0
           const isDown = diff < 0
-          
+
           return (
-            <div key={month.month} className="card text-center">
+            <Card key={month.month} className="text-center">
               <p className="text-[12px] text-[var(--color-text-muted)] mb-1">{month.month}</p>
               <p className="text-lg font-bold font-mono text-[var(--color-text-primary)]">
                 {formatCurrency(month.total)}
@@ -217,188 +205,191 @@ export default function Compare() {
                   <span>{Math.abs(diff) > 0 ? formatCurrency(Math.abs(diff)) : '-'}</span>
                 </div>
               )}
-            </div>
+            </Card>
           )
         })}
       </motion.div>
 
       {/* Total Trend Chart */}
-      <motion.div variants={item} className="card">
-        <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-6">
-          Total Spending Trend
-        </h3>
-        <div style={{ width: '100%', height: 250 }}>
-          <ResponsiveContainer>
-            <LineChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="month" stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} tickFormatter={v => `$${v}`} axisLine={false} tickLine={false} width={60} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line 
-                type="monotone" 
-                dataKey="total" 
-                name="Total Spent"
-                stroke="var(--color-accent)" 
-                strokeWidth={3}
-                dot={{ fill: 'var(--color-accent)', strokeWidth: 0, r: 5 }}
-                activeDot={{ r: 7, fill: 'var(--color-accent)' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      <motion.div variants={item}>
+        <Card>
+          <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-6">
+            Total Spending Trend
+          </h3>
+          <div style={{ width: '100%', height: 250 }}>
+            <ResponsiveContainer>
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="month" stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} tickFormatter={v => `$${v}`} axisLine={false} tickLine={false} width={60} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  name="Total Spent"
+                  stroke="var(--color-accent)"
+                  strokeWidth={3}
+                  dot={{ fill: 'var(--color-accent)', strokeWidth: 0, r: 5 }}
+                  activeDot={{ r: 7, fill: 'var(--color-accent)' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
       </motion.div>
 
       {/* Category Comparison Chart */}
-      <motion.div variants={item} className="card">
-        <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-6">
-          Category Comparison
-        </h3>
-        {categoryChartData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-muted)] flex items-center justify-center mb-4">
-              <BarChart3 className="w-8 h-8 text-[var(--color-text-muted)]" />
-            </div>
-            <p className="text-[var(--color-text-muted)]">No expense data for selected period</p>
-          </div>
-        ) : (
-          <div style={{ width: '100%', height: Math.max(300, categoryChartData.length * 50) }}>
-            <ResponsiveContainer>
-              <BarChart 
-                data={categoryChartData} 
-                layout="vertical" 
-                margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-                <XAxis 
-                  type="number" 
-                  stroke="var(--color-text-muted)" 
-                  tick={{ fontSize: 12 }} 
-                  tickFormatter={v => `$${v}`} 
-                  axisLine={false} 
-                  tickLine={false} 
-                />
-                <YAxis 
-                  type="category" 
-                  dataKey="name" 
-                  stroke="var(--color-text-muted)" 
-                  tick={{ fontSize: 12 }} 
-                  width={120} 
-                  axisLine={false} 
-                  tickLine={false} 
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: 16 }} />
-                {monthlyData.map((month, i) => (
-                  <Bar 
-                    key={month.shortMonth}
-                    dataKey={month.shortMonth} 
-                    name={month.month}
-                    fill={barColors[i % barColors.length]} 
-                    radius={[0, 4, 4, 0]} 
+      <motion.div variants={item}>
+        <Card>
+          <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] mb-6">
+            Category Comparison
+          </h3>
+          {categoryChartData.length === 0 ? (
+            <EmptyState
+              icon={BarChart3}
+              title="No expense data"
+              description="No expenses found for the selected period."
+            />
+          ) : (
+            <div style={{ width: '100%', height: Math.max(300, categoryChartData.length * 50) }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={categoryChartData}
+                  layout="vertical"
+                  margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    stroke="var(--color-text-muted)"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={v => `$${v}`}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    stroke="var(--color-text-muted)"
+                    tick={{ fontSize: 12 }}
+                    width={120}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: 16 }} />
+                  {monthlyData.map((month, i) => (
+                    <Bar
+                      key={month.shortMonth}
+                      dataKey={month.shortMonth}
+                      name={month.month}
+                      fill={barColors[i % barColors.length]}
+                      radius={[0, 4, 4, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Card>
       </motion.div>
 
       {/* Category Table */}
-      <motion.div variants={item} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="p-4 border-b border-[var(--color-border)]">
-          <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">
-            Detailed Comparison
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[var(--color-bg-muted)]">
-                <th className="text-left p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Category
-                </th>
-                {monthlyData.map(month => (
-                  <th key={month.month} className="text-right p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {month.shortMonth}
+      <motion.div variants={item}>
+        <Card padding={false}>
+          <div className="p-4 border-b border-[var(--color-border)]">
+            <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">
+              Detailed Comparison
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[var(--color-bg-muted)]">
+                  <th className="text-left p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                    Category
                   </th>
-                ))}
-                <th className="text-right p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Avg
-                </th>
-                <th className="text-right p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Trend
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeCategories.map((cat, i) => {
-                const values = monthlyData.map(m => m.categories[cat.id] || 0)
-                const avg = values.reduce((a, b) => a + b, 0) / values.length
-                const firstVal = values[0] || 0
-                const lastVal = values[values.length - 1] || 0
-                const trend = lastVal - firstVal
-                const trendPercent = firstVal > 0 ? ((trend / firstVal) * 100) : 0
-                
-                return (
-                  <tr key={cat.id} className={`${i !== 0 ? 'border-t border-[var(--color-border)]' : ''} hover:bg-[var(--color-bg-hover)]`}>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: cat.color }}
-                        />
-                        <span className="text-[14px] text-[var(--color-text-primary)]">{cat.name}</span>
-                      </div>
-                    </td>
-                    {values.map((val, j) => (
-                      <td key={j} className="p-3 text-right font-mono text-[13px] text-[var(--color-text-primary)]">
-                        {val > 0 ? formatCurrency(val) : '-'}
+                  {monthlyData.map(month => (
+                    <th key={month.month} className="text-right p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                      {month.shortMonth}
+                    </th>
+                  ))}
+                  <th className="text-right p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                    Avg
+                  </th>
+                  <th className="text-right p-3 text-[12px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                    Trend
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeCategories.map((cat, i) => {
+                  const values = monthlyData.map(m => m.categories[cat.id] || 0)
+                  const avg = values.reduce((a, b) => a + b, 0) / values.length
+                  const firstVal = values[0] || 0
+                  const lastVal = values[values.length - 1] || 0
+                  const trend = lastVal - firstVal
+                  const trendPercent = firstVal > 0 ? ((trend / firstVal) * 100) : 0
+
+                  return (
+                    <tr key={cat.id} className={`${i !== 0 ? 'border-t border-[var(--color-border)]' : ''} hover:bg-[var(--color-bg-hover)] transition-colors`}>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          <span className="text-[14px] text-[var(--color-text-primary)]">{cat.name}</span>
+                        </div>
                       </td>
-                    ))}
-                    <td className="p-3 text-right font-mono text-[13px] text-[var(--color-accent)]">
-                      {formatCurrency(avg)}
+                      {values.map((val, j) => (
+                        <td key={j} className="p-3 text-right font-mono text-[13px] text-[var(--color-text-primary)]">
+                          {val > 0 ? formatCurrency(val) : '-'}
+                        </td>
+                      ))}
+                      <td className="p-3 text-right font-mono text-[13px] text-[var(--color-accent)]">
+                        {formatCurrency(avg)}
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className={`flex items-center justify-end gap-1 text-[12px] ${trend > 0 ? 'text-[var(--color-danger)]' : trend < 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-text-muted)]'}`}>
+                          {trend > 0 ? <TrendingUp className="w-3 h-3" /> : trend < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+                          <span>{trend !== 0 ? `${trendPercent.toFixed(0)}%` : '-'}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {/* Totals Row */}
+                <tr className="border-t-2 border-[var(--color-border)] bg-[var(--color-bg-muted)] font-semibold">
+                  <td className="p-3 text-[14px] text-[var(--color-text-primary)]">Total</td>
+                  {monthlyData.map(month => (
+                    <td key={month.month} className="p-3 text-right font-mono text-[13px] text-[var(--color-text-primary)]">
+                      {formatCurrency(month.total)}
                     </td>
-                    <td className="p-3 text-right">
-                      <div className={`flex items-center justify-end gap-1 text-[12px] ${trend > 0 ? 'text-[var(--color-danger)]' : trend < 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-text-muted)]'}`}>
-                        {trend > 0 ? <TrendingUp className="w-3 h-3" /> : trend < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                        <span>{trend !== 0 ? `${trendPercent.toFixed(0)}%` : '-'}</span>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-              {/* Totals Row */}
-              <tr className="border-t-2 border-[var(--color-border)] bg-[var(--color-bg-muted)] font-semibold">
-                <td className="p-3 text-[14px] text-[var(--color-text-primary)]">Total</td>
-                {monthlyData.map(month => (
-                  <td key={month.month} className="p-3 text-right font-mono text-[13px] text-[var(--color-text-primary)]">
-                    {formatCurrency(month.total)}
+                  ))}
+                  <td className="p-3 text-right font-mono text-[13px] text-[var(--color-accent)]">
+                    {formatCurrency(monthlyData.reduce((sum, m) => sum + m.total, 0) / monthlyData.length)}
                   </td>
-                ))}
-                <td className="p-3 text-right font-mono text-[13px] text-[var(--color-accent)]">
-                  {formatCurrency(monthlyData.reduce((sum, m) => sum + m.total, 0) / monthlyData.length)}
-                </td>
-                <td className="p-3 text-right">
-                  {monthlyData.length >= 2 && (
-                    <div className={`flex items-center justify-end gap-1 text-[12px] ${
-                      monthlyData[monthlyData.length - 1].total > monthlyData[0].total 
-                        ? 'text-[var(--color-danger)]' 
-                        : 'text-[var(--color-success)]'
-                    }`}>
-                      {monthlyData[monthlyData.length - 1].total > monthlyData[0].total 
-                        ? <TrendingUp className="w-3 h-3" /> 
-                        : <TrendingDown className="w-3 h-3" />
-                      }
-                    </div>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  <td className="p-3 text-right">
+                    {monthlyData.length >= 2 && (
+                      <div className={`flex items-center justify-end gap-1 text-[12px] ${
+                        monthlyData[monthlyData.length - 1].total > monthlyData[0].total
+                          ? 'text-[var(--color-danger)]'
+                          : 'text-[var(--color-success)]'
+                      }`}>
+                        {monthlyData[monthlyData.length - 1].total > monthlyData[0].total
+                          ? <TrendingUp className="w-3 h-3" />
+                          : <TrendingDown className="w-3 h-3" />
+                        }
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </motion.div>
     </motion.div>
   )
 }
-
-
