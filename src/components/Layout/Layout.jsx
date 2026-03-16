@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -22,6 +22,7 @@ function getStoredCollapse() {
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const isDesktop = useIsDesktop()
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -63,13 +64,16 @@ export default function Layout() {
       case 'import-statement':
         setShowStatementImport(true)
         break
+      case 'scan-receipt':
+        navigate('/scan-receipt')
+        break
       case 'export-data':
-        // Will be handled by Settings page
+        navigate('/settings')
         break
       default:
         break
     }
-  }, [])
+  }, [navigate])
 
   // Calculate main content margin
   const mainMarginLeft = isDesktop
@@ -93,7 +97,7 @@ export default function Layout() {
           minHeight: '100vh',
           transition: 'margin-left var(--transition-sidebar)',
           // Add bottom padding on mobile for bottom nav
-          paddingBottom: isMobile ? '68px' : '0px',
+          paddingBottom: isMobile ? '80px' : '0px',
         }}
       >
         <Header

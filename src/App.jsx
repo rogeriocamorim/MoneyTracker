@@ -68,15 +68,31 @@ function App() {
       <MoneyProvider>
         <Toaster
           position="top-center"
+          gutter={8}
           toastOptions={{
             duration: 3000,
             style: {
               background: 'var(--color-bg-elevated)',
               color: 'var(--color-text-primary)',
               border: '1px solid var(--color-border)',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-xl)',
               fontSize: '14px',
               padding: '12px 16px',
+              boxShadow: 'var(--shadow-lg)',
+              maxWidth: '420px',
+              lineHeight: '1.5',
+            },
+            success: {
+              iconTheme: {
+                primary: 'var(--color-success)',
+                secondary: 'white',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: 'var(--color-danger)',
+                secondary: 'white',
+              },
             },
           }}
         />
