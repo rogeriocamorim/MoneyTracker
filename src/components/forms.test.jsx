@@ -213,9 +213,9 @@ describe('IncomeForm', () => {
     const amountInput = screen.getByPlaceholderText('0.00')
     fireEvent.change(amountInput, { target: { value: '3000' } })
 
-    // Fill notes
+    // Fill notes — use fireEvent to avoid race condition with Modal focus trap
     const notesInput = screen.getByPlaceholderText('Optional description')
-    await user.type(notesInput, 'Monthly salary')
+    fireEvent.change(notesInput, { target: { value: 'Monthly salary' } })
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: /Add Income/i })
