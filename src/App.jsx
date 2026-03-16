@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { MoneyProvider, useMoney } from './context/MoneyContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Layout from './components/Layout/Layout'
 import Dashboard from './components/Dashboard'
 import ExpenseList from './components/ExpenseList'
@@ -63,23 +64,25 @@ function AppContent() {
 
 function App() {
   return (
-    <MoneyProvider>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: 'var(--color-bg-elevated)',
-            color: 'var(--color-text-primary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '12px',
-            fontSize: '14px',
-            padding: '12px 16px',
-          },
-        }}
-      />
-      <AppContent />
-    </MoneyProvider>
+    <ThemeProvider>
+      <MoneyProvider>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: 'var(--color-bg-elevated)',
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '12px',
+              fontSize: '14px',
+              padding: '12px 16px',
+            },
+          }}
+        />
+        <AppContent />
+      </MoneyProvider>
+    </ThemeProvider>
   )
 }
 

@@ -2,12 +2,9 @@
    MoneyTracker Design System — v2.0 (TailAdmin-inspired)
    ================================================================ */
 
-@import "tailwindcss";
-
-/* ----------------------------------------------------------------
-   Font faces — self-hosted feel via Google Fonts with display=swap
-   ---------------------------------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import "tailwindcss";
 
 /* ----------------------------------------------------------------
    Light Theme (default)

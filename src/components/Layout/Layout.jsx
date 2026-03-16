@@ -1,66 +1,141 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import BottomNav from '../ui/BottomNav'
+import CommandPalette from '../ui/CommandPalette'
+import { useIsDesktop, useIsMobile } from '../../hooks/useMediaQuery'
+import { Spinner } from '../ui/Spinner'
 
 const StatementImport = lazy(() => import('../StatementImport'))
 
-const SIDEBAR_WIDTH = 280
+const COLLAPSE_KEY = 'moneytracker_sidebar_collapsed'
+
+function getStoredCollapse() {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
 
 export default function Layout() {
   const location = useLocation()
+  const isDesktop = useIsDesktop()
+  const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(false)
   const [showStatementImport, setShowStatementImport] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
+  // Track sidebar collapsed state for margin calculation
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getStoredCollapse)
+
+  // Sync collapsed state from localStorage (Sidebar writes it)
   useEffect(() => {
-    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024)
-    checkDesktop()
-    window.addEventListener('resize', checkDesktop)
-    return () => window.removeEventListener('resize', checkDesktop)
+    const handleStorage = () => setSidebarCollapsed(getStoredCollapse())
+
+    // Poll for changes since Sidebar writes to localStorage directly
+    const interval = setInterval(handleStorage, 300)
+    return () => clearInterval(interval)
   }, [])
 
+  // Close mobile sidebar on route change
   useEffect(() => {
     if (!isDesktop) setSidebarOpen(false)
   }, [location.pathname, isDesktop])
 
+  // Global keyboard shortcut for command palette
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen((prev) => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Handle actions from CommandPalette and Sidebar
+  const handleAction = useCallback((actionId) => {
+    switch (actionId) {
+      case 'import-statement':
+        setShowStatementImport(true)
+        break
+      case 'export-data':
+        // Will be handled by Settings page
+        break
+      default:
+        break
+    }
+  }, [])
+
+  // Calculate main content margin
+  const mainMarginLeft = isDesktop
+    ? sidebarCollapsed
+      ? 'var(--sidebar-width-collapsed)'
+      : 'var(--sidebar-width-expanded)'
+    : '0px'
+
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)]">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-        onImportStatement={() => setShowStatementImport(true)}
-        width={SIDEBAR_WIDTH}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onAction={handleAction}
       />
-      
-      {/* Main content */}
-      <div 
-        style={{ 
-          marginLeft: isDesktop ? `${SIDEBAR_WIDTH}px` : 0,
+
+      {/* Main content area */}
+      <div
+        style={{
+          marginLeft: mainMarginLeft,
           minHeight: '100vh',
-          transition: 'margin-left 0.3s ease'
+          transition: 'margin-left var(--transition-sidebar)',
+          // Add bottom padding on mobile for bottom nav
+          paddingBottom: isMobile ? '68px' : '0px',
         }}
       >
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        
-        {/* Page content with proper padding */}
+        <Header
+          onMenuClick={() => setSidebarOpen(true)}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+        />
+
+        {/* Page content */}
         <main className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                <Outlet />
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center py-20">
+                      <Spinner size="lg" />
+                    </div>
+                  }
+                >
+                  <Outlet />
+                </Suspense>
               </motion.div>
             </AnimatePresence>
           </div>
         </main>
       </div>
+
+      {/* Command Palette (global) */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onAction={handleAction}
+      />
+
+      {/* Bottom nav on mobile */}
+      {isMobile && <BottomNav />}
 
       {/* Statement Import Modal */}
       <AnimatePresence>
