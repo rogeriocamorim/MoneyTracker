@@ -152,7 +152,7 @@ export default function Dashboard() {
         periodLabel={selectedPeriod === 'this_month' ? 'Budget Used' : 'Avg Budget/Mo'}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ marginTop: '40px' }}>
         <CashFlowChart trendData={trendData} />
         <CategoryPieChart categoryTotals={categoryTotals} />
       </div>

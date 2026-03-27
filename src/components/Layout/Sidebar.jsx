@@ -96,6 +96,8 @@ export default function Sidebar({ isOpen, onClose, onAction }) {
               : 'translateX(-100%)',
           transition: 'transform var(--transition-sidebar), width var(--transition-sidebar)',
           background: 'var(--sidebar-bg)',
+          borderRight: '1px solid var(--sidebar-border)',
+          boxShadow: '4px 0 20px -4px rgb(26 22 16 / 0.06)',
         }}
       >
         {/* Logo */}
@@ -185,7 +187,7 @@ export default function Sidebar({ isOpen, onClose, onAction }) {
                           {/* Active indicator bar */}
                           {isActive && (
                             <div
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
                               style={{ background: 'var(--sidebar-accent)' }}
                             />
                           )}

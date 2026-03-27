@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, Wallet, Target, ArrowUpRight, ArrowDownRight } from 'lucide-react'
-import { Card, Badge } from '../ui'
+import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react'
 import { formatCurrency } from '../../utils/calculations'
 
 const item = {
@@ -8,28 +7,51 @@ const item = {
   show: { opacity: 1, y: 0 }
 }
 
-function StatCard({ icon: Icon, label, value, trend, color, bgColor }) {
-  const isUp = trend === 'up'
-  
+function StatCard({ icon: Icon, label, value, gradientVar, shadowVar }) {
   return (
     <motion.div variants={item}>
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <div 
-            className="w-12 h-12 rounded-[var(--radius-xl)] flex items-center justify-center"
-            style={{ backgroundColor: bgColor }}
+      <div
+        className="relative overflow-hidden rounded-[var(--radius-xl)]"
+        style={{
+          background: `linear-gradient(135deg, var(${gradientVar}-from) 0%, var(${gradientVar}-to) 100%)`,
+          boxShadow: `0 8px 24px -4px var(${shadowVar})`,
+          padding: '20px 24px 24px',
+          minHeight: '130px',
+        }}
+      >
+        {/* Decorative circles */}
+        <div
+          className="absolute -right-6 -top-6 w-32 h-32 rounded-full pointer-events-none"
+          style={{ background: 'rgba(255,255,255,0.07)' }}
+        />
+        <div
+          className="absolute -right-2 -bottom-10 w-24 h-24 rounded-full pointer-events-none"
+          style={{ background: 'rgba(255,255,255,0.05)' }}
+        />
+
+        <div className="relative flex flex-col h-full gap-3">
+          {/* Icon */}
+          <div
+            className="p-2 rounded-[var(--radius-md)] self-start"
+            style={{ background: 'rgba(255,255,255,0.18)' }}
           >
-            <Icon className="w-6 h-6" style={{ color }} />
+            <Icon className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
-          {trend && (
-            <Badge variant={isUp ? 'success' : 'danger'} size="sm">
-              {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-            </Badge>
-          )}
+
+          {/* Label + value */}
+          <div>
+            <p
+              className="text-[11px] font-semibold uppercase tracking-widest mb-1.5"
+              style={{ color: 'rgba(255,255,255,0.65)' }}
+            >
+              {label}
+            </p>
+            <p className="text-[1.6rem] font-bold font-mono text-white leading-none">
+              {value}
+            </p>
+          </div>
         </div>
-        <p className="text-[13px] text-[var(--color-text-muted)] mb-1">{label}</p>
-        <p className="text-2xl font-semibold font-mono" style={{ color }}>{value}</p>
-      </Card>
+      </div>
     </motion.div>
   )
 }
@@ -41,32 +63,29 @@ export default function StatCardsGrid({ totalIncome, totalExpenses, savings, bud
         icon={TrendingUp}
         label="Income"
         value={formatCurrency(totalIncome)}
-        trend="up"
-        color="var(--color-success)"
-        bgColor="var(--color-success-muted)"
+        gradientVar="--stat-income"
+        shadowVar="--stat-income-shadow"
       />
       <StatCard
         icon={TrendingDown}
         label="Expenses"
         value={formatCurrency(totalExpenses)}
-        trend="down"
-        color="var(--color-danger)"
-        bgColor="var(--color-danger-muted)"
+        gradientVar="--stat-expenses"
+        shadowVar="--stat-expenses-shadow"
       />
       <StatCard
         icon={Wallet}
         label="Net Savings"
         value={formatCurrency(Math.abs(savings))}
-        trend={savings >= 0 ? 'up' : 'down'}
-        color={savings >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}
-        bgColor={savings >= 0 ? 'var(--color-success-muted)' : 'var(--color-danger-muted)'}
+        gradientVar="--stat-savings"
+        shadowVar="--stat-savings-shadow"
       />
       <StatCard
         icon={Target}
         label={periodLabel}
         value={`${budgetPercentage}%`}
-        color="var(--color-accent)"
-        bgColor="var(--color-accent-muted)"
+        gradientVar="--stat-budget"
+        shadowVar="--stat-budget-shadow"
       />
     </div>
   )

@@ -60,8 +60,8 @@ export default function Header({ onMenuClick, onOpenCommandPalette }) {
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-muted)] text-sm"
             aria-label="Open command palette"
           >
-            <SearchIcon className="w-3.5 h-3.5" />
-            <span className="text-[13px]">Search...</span>
+            <SearchIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-[13px] pl-1">Search...</span>
             <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-muted)] bg-[var(--color-bg-muted)] rounded border border-[var(--color-border)]">
               {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}K
             </kbd>
