@@ -23,6 +23,48 @@ function cleanAccountName(raw) {
   return name
 }
 
+/** Normalise a string for fuzzy matching */
+function normaliseName(name) {
+  if (!name) return ''
+  return name.toLowerCase().replace(/[^a-z0-9\s&+]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Build a description→category lookup from existing transactions.
+ * Uses both exact normalised match and substring containment.
+ */
+function buildExistingCategoryMap(expenses, income) {
+  const map = {} // normalisedDesc → categoryId
+  for (const tx of expenses) {
+    if (!tx.category) continue
+    const key = normaliseName(tx.description)
+    if (key) map[key] = tx.category
+    const rawKey = normaliseName(tx.merchant || tx.rawDescription)
+    if (rawKey) map[rawKey] = tx.category
+  }
+  for (const tx of income) {
+    if (!tx.source) continue
+    const key = normaliseName(tx.description)
+    if (key) map[key] = tx.source
+  }
+  return map
+}
+
+/** Look up category from existing transactions map (exact then substring) */
+function getCategoryFromExisting(existingMap, rawDesc, cleanDesc) {
+  const key1 = normaliseName(rawDesc)
+  const key2 = normaliseName(cleanDesc)
+  // Exact match
+  if (key1 && existingMap[key1]) return existingMap[key1]
+  if (key2 && existingMap[key2]) return existingMap[key2]
+  // Substring match
+  for (const [mapKey, cat] of Object.entries(existingMap)) {
+    if (key1 && (key1.includes(mapKey) || mapKey.includes(key1))) return cat
+    if (key2 && (key2.includes(mapKey) || mapKey.includes(key2))) return cat
+  }
+  return null
+}
+
 const STEPS = ['Upload', 'Review', 'Done']
 
 /**
@@ -108,12 +150,16 @@ export default function StatementImport({ open, onClose }) {
 
       const account = cleanAccountName(result.accountInfo)
 
+      // Build lookup from already-imported transactions for category suggestions
+      const existingCategoryMap = buildExistingCategoryMap(expenses, income)
+
       // Build rows with duplicate detection + auto-category
       const enrichedRows = result.transactions.map((tx, idx) => {
         const dup = isDuplicate(tx, expenses, income)
         const autoCategory =
           getMerchantCategory(tx.rawDescription) ||
           getMerchantCategory(tx.description) ||
+          getCategoryFromExisting(existingCategoryMap, tx.rawDescription, tx.description) ||
           null
 
         return {
