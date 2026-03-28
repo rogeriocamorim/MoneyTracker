@@ -131,7 +131,7 @@ function CategoryManager({ customCategories, dispatch }) {
   const totalCount = allExpense.length + allIncome.length
 
   const renderCategoryRow = (cat) => (
-    <div key={cat.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-slate-50 transition-colors group">
+    <div key={cat.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-slate-50 transition-colors">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {cat.color && (
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
@@ -151,9 +151,6 @@ function CategoryManager({ customCategories, dispatch }) {
         ) : (
           <span className="text-sm text-slate-700 truncate">{cat.name}</span>
         )}
-        {cat.builtin && (
-          <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">built-in</span>
-        )}
       </div>
       {!cat.builtin && (
         <div className="flex items-center gap-0.5 shrink-0">
@@ -170,12 +167,12 @@ function CategoryManager({ customCategories, dispatch }) {
             <>
               <button
                 onClick={() => startEdit(cat)}
-                className="text-slate-300 hover:text-primary-500 cursor-pointer p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-slate-400 hover:text-primary-500 cursor-pointer p-1"
                 title="Rename"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => handleRemove(cat.id)} className="text-slate-300 hover:text-danger-500 cursor-pointer p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => handleRemove(cat.id)} className="text-slate-400 hover:text-danger-500 cursor-pointer p-1">
                 <X className="w-4 h-4" />
               </button>
             </>
