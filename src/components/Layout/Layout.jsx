@@ -1,154 +1,65 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useCallback } from 'react'
+import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import BottomNav from '../ui/BottomNav'
-import CommandPalette from '../ui/CommandPalette'
-import { useIsDesktop, useIsMobile } from '../../hooks/useMediaQuery'
-import { Spinner } from '../ui/Spinner'
-
-const StatementImport = lazy(() => import('../StatementImport'))
-
-const COLLAPSE_KEY = 'moneytracker_sidebar_collapsed'
-
-function getStoredCollapse() {
-  try {
-    return localStorage.getItem(COLLAPSE_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import CommandPalette from '@/components/ui/CommandPalette'
+import BottomNav from '@/components/ui/BottomNav'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
 export default function Layout() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const isDesktop = useIsDesktop()
-  const isMobile = useIsMobile()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [showStatementImport, setShowStatementImport] = useState(false)
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const isMobile = useMediaQuery('(max-width: 1023px)')
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Track sidebar collapsed state for margin calculation
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(getStoredCollapse)
+  const toggleCollapse = useCallback(() => setCollapsed((c) => !c), [])
+  const toggleMobile = useCallback(() => setMobileOpen((m) => !m), [])
 
-  // Sync collapsed state from localStorage (Sidebar writes it)
-  useEffect(() => {
-    const handleStorage = () => setSidebarCollapsed(getStoredCollapse())
-
-    // Poll for changes since Sidebar writes to localStorage directly
-    const interval = setInterval(handleStorage, 300)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Close mobile sidebar on route change
-  useEffect(() => {
-    if (!isDesktop) setSidebarOpen(false)
-  }, [location.pathname, isDesktop])
-
-  // Global keyboard shortcut for command palette
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setCommandPaletteOpen((prev) => !prev)
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
-  // Handle actions from CommandPalette and Sidebar
-  const handleAction = useCallback((actionId) => {
-    switch (actionId) {
-      case 'import-statement':
-        setShowStatementImport(true)
-        break
-      case 'scan-receipt':
-        navigate('/scan-receipt')
-        break
-      case 'export-data':
-        navigate('/settings')
-        break
-      default:
-        break
-    }
-  }, [navigate])
-
-  // Calculate main content margin
-  const mainMarginLeft = isDesktop
-    ? sidebarCollapsed
-      ? 'var(--sidebar-width-collapsed)'
-      : 'var(--sidebar-width-expanded)'
-    : '0px'
+  const sidebarWidth = collapsed ? 72 : 256
 
   return (
-    <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)]">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onAction={handleAction}
-      />
-
-      {/* Main content area */}
-      <div
-        style={{
-          marginLeft: mainMarginLeft,
-          minHeight: '100vh',
-          transition: 'margin-left var(--transition-sidebar)',
-          // Add bottom padding on mobile for bottom nav
-          paddingBottom: isMobile ? '80px' : '0px',
-        }}
-      >
-        <Header
-          onMenuClick={() => setSidebarOpen(true)}
-          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+    <div className="min-h-screen bg-slate-50">
+      {/* Mobile overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setMobileOpen(false)}
         />
+      )}
 
-        {/* Page content */}
-        <main id="main-content" className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-              >
-                <Suspense
-                  fallback={
-                    <div className="flex items-center justify-center py-20">
-                      <Spinner size="lg" />
-                    </div>
-                  }
-                >
-                  <Outlet />
-                </Suspense>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+      {/* Sidebar — desktop always visible, mobile slide-in */}
+      <div
+        className={`
+          ${isMobile
+            ? `fixed z-50 transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : ''
+          }
+        `}
+      >
+        <Sidebar
+          collapsed={isMobile ? false : collapsed}
+          onToggle={isMobile ? () => setMobileOpen(false) : toggleCollapse}
+        />
+      </div>
+
+      {/* Main content */}
+      <div
+        className="transition-all duration-300"
+        style={{ marginLeft: isMobile ? 0 : sidebarWidth }}
+      >
+        <Header onMobileMenuToggle={toggleMobile} />
+        <main className={`p-4 sm:p-6 ${isMobile ? 'pb-24' : ''}`}>
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
-      {/* Command Palette (global) */}
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        onAction={handleAction}
-      />
+      {/* Command palette (Cmd+K) */}
+      <CommandPalette />
 
-      {/* Bottom nav on mobile */}
+      {/* Mobile bottom navigation */}
       {isMobile && <BottomNav />}
-
-      {/* Statement Import Modal */}
-      <AnimatePresence>
-        {showStatementImport && (
-          <Suspense fallback={null}>
-            <StatementImport onClose={() => setShowStatementImport(false)} />
-          </Suspense>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

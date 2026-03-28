@@ -1,45 +1,39 @@
-/**
- * Spinner — loading indicator with multiple styles.
- */
+import { Loader2 } from 'lucide-react'
 
 export function Spinner({ size = 'md', className = '' }) {
   const sizeClasses = {
-    sm: 'w-4 h-4 border-2',
-    md: 'w-8 h-8 border-3',
-    lg: 'w-12 h-12 border-4',
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-12 h-12',
   }
 
   return (
-    <div
-      className={`
-        ${sizeClasses[size]}
-        border-[var(--color-accent)] border-t-transparent
-        rounded-full animate-spin
-        ${className}
-      `}
-      role="status"
-      aria-label="Loading"
-    />
+    <Loader2 className={`animate-spin text-primary-500 ${sizeClasses[size]} ${className}`} />
+  )
+}
+
+export function LoadingOverlay({ message = 'Loading...' }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-16">
+      <Spinner size="lg" />
+      <p className="text-sm text-slate-500">{message}</p>
+    </div>
   )
 }
 
 export function Skeleton({ className = '', ...props }) {
-  return (
-    <div
-      className={`
-        bg-[var(--color-bg-muted)] rounded-[var(--radius-md)] animate-pulse
-        ${className}
-      `}
-      {...props}
-    />
-  )
+  return <div className={`skeleton ${className}`} {...props} />
 }
 
-export function SpinnerOverlay({ message = 'Loading...' }) {
+export function SkeletonCard() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[200px] gap-3">
-      <Spinner size="lg" />
-      <p className="text-sm text-[var(--color-text-muted)]">{message}</p>
+    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-3 w-20" />
     </div>
   )
 }
+
+export default Spinner

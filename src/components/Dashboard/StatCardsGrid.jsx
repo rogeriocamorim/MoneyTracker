@@ -1,91 +1,62 @@
-import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react'
-import { formatCurrency } from '../../utils/calculations'
+import { subMonths } from 'date-fns'
+import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
+import { StatCard } from '@/components/ui/Card'
+import { useMoney } from '@/context/MoneyContext'
+import {
+  formatCurrency,
+  getMonthlyExpenses,
+  getMonthlyIncome,
+  getTotal,
+  getPercentChange,
+} from '@/utils/calculations'
 
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-}
+export default function StatCardsGrid() {
+  const { state } = useMoney()
+  const { expenses, income, settings } = state
 
-function StatCard({ icon: Icon, label, value, gradientVar, shadowVar }) {
+  const now = new Date()
+  const lastMonthDate = subMonths(now, 1)
+
+  const thisMonthExpenses = getTotal(getMonthlyExpenses(expenses, now))
+  const prevMonthExpenses = getTotal(getMonthlyExpenses(expenses, lastMonthDate))
+  const thisMonthIncome = getTotal(getMonthlyIncome(income, now))
+  const prevMonthIncome = getTotal(getMonthlyIncome(income, lastMonthDate))
+
+  const totalIncome = getTotal(income)
+  const totalExpenses = getTotal(expenses)
+  const netWorth = totalIncome - totalExpenses
+
+  const expenseTrend = getPercentChange(thisMonthExpenses, prevMonthExpenses)
+  const incomeTrend = getPercentChange(thisMonthIncome, prevMonthIncome)
+
+  const sym = settings?.currencySymbol || '$'
+
   return (
-    <motion.div variants={item}>
-      <div
-        className="relative overflow-hidden rounded-[var(--radius-xl)]"
-        style={{
-          background: `linear-gradient(135deg, var(${gradientVar}-from) 0%, var(${gradientVar}-to) 100%)`,
-          boxShadow: `0 8px 24px -4px var(${shadowVar})`,
-          padding: '20px 24px 24px',
-          minHeight: '130px',
-        }}
-      >
-        {/* Decorative circles */}
-        <div
-          className="absolute -right-6 -top-6 w-32 h-32 rounded-full pointer-events-none"
-          style={{ background: 'rgba(255,255,255,0.07)' }}
-        />
-        <div
-          className="absolute -right-2 -bottom-10 w-24 h-24 rounded-full pointer-events-none"
-          style={{ background: 'rgba(255,255,255,0.05)' }}
-        />
-
-        <div className="relative flex flex-col h-full gap-3">
-          {/* Icon */}
-          <div
-            className="p-2 rounded-[var(--radius-md)] self-start"
-            style={{ background: 'rgba(255,255,255,0.18)' }}
-          >
-            <Icon className="w-4 h-4 text-white" strokeWidth={2} />
-          </div>
-
-          {/* Label + value */}
-          <div>
-            <p
-              className="text-[11px] font-semibold uppercase tracking-widest mb-1.5"
-              style={{ color: 'rgba(255,255,255,0.65)' }}
-            >
-              {label}
-            </p>
-            <p className="text-[1.6rem] font-bold font-mono text-white leading-none">
-              {value}
-            </p>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-export default function StatCardsGrid({ totalIncome, totalExpenses, savings, budgetPercentage, periodLabel }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <StatCard
+        label="Net Worth"
+        value={formatCurrency(netWorth, sym)}
+        icon={DollarSign}
+        iconColor="text-primary-500"
+        iconBg="bg-primary-50"
+      />
+      <StatCard
+        label="Monthly Income"
+        value={formatCurrency(thisMonthIncome, sym)}
         icon={TrendingUp}
-        label="Income"
-        value={formatCurrency(totalIncome)}
-        gradientVar="--stat-income"
-        shadowVar="--stat-income-shadow"
+        trend={isFinite(incomeTrend) ? incomeTrend : null}
+        trendLabel="vs last month"
+        iconColor="text-success-500"
+        iconBg="bg-success-50"
       />
       <StatCard
+        label="Monthly Spending"
+        value={formatCurrency(thisMonthExpenses, sym)}
         icon={TrendingDown}
-        label="Expenses"
-        value={formatCurrency(totalExpenses)}
-        gradientVar="--stat-expenses"
-        shadowVar="--stat-expenses-shadow"
-      />
-      <StatCard
-        icon={Wallet}
-        label="Net Savings"
-        value={formatCurrency(Math.abs(savings))}
-        gradientVar="--stat-savings"
-        shadowVar="--stat-savings-shadow"
-      />
-      <StatCard
-        icon={Target}
-        label={periodLabel}
-        value={`${budgetPercentage}%`}
-        gradientVar="--stat-budget"
-        shadowVar="--stat-budget-shadow"
+        trend={isFinite(expenseTrend) ? expenseTrend : null}
+        trendLabel="vs last month"
+        iconColor="text-danger-500"
+        iconBg="bg-danger-50"
       />
     </div>
   )

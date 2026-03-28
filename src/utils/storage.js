@@ -1,13 +1,22 @@
 const STORAGE_KEY = 'moneytracker_data'
 
 const defaultData = {
+  version: 2,
   expenses: [],
   income: [],
   budgets: {},
+  goals: [],
+  accounts: [],
+  customCategories: [],
   settings: {
     currency: 'CAD',
     currencySymbol: '$',
+    autoSyncEnabled: false,
+    theme: 'light',
+    sidebarCollapsed: false,
+    defaultPeriod: 'this_month',
   },
+  setupComplete: false,
 }
 
 export const loadData = () => {
@@ -36,10 +45,10 @@ export const exportToJson = (data) => {
   const dataStr = JSON.stringify(data, null, 2)
   const blob = new Blob([dataStr], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
-  
+
   const date = new Date().toISOString().split('T')[0]
   const filename = `moneytracker_backup_${date}.json`
-  
+
   const link = document.createElement('a')
   link.href = url
   link.download = filename
@@ -52,34 +61,27 @@ export const exportToJson = (data) => {
 export const importFromJson = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    
+
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target.result)
-        
-        // Validate structure
+
         if (!data.expenses || !Array.isArray(data.expenses)) {
           throw new Error('Invalid data: missing expenses array')
         }
         if (!data.income || !Array.isArray(data.income)) {
           throw new Error('Invalid data: missing income array')
         }
-        
+
         resolve({ ...defaultData, ...data })
       } catch (error) {
         reject(new Error('Invalid JSON file: ' + error.message))
       }
     }
-    
-    reader.onerror = () => {
-      reject(new Error('Error reading file'))
-    }
-    
+
+    reader.onerror = () => reject(new Error('Error reading file'))
     reader.readAsText(file)
   })
 }
 
-// Aliases for compatibility
-export const exportData = exportToJson
-export const importData = importFromJson
-
+export { STORAGE_KEY, defaultData }

@@ -1,4 +1,3 @@
-import { useState, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,123 +6,74 @@ import {
   getPaginationRowModel,
   flexRender,
 } from '@tanstack/react-table'
+import { useState } from 'react'
 import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default function DataTable({
+export default function Table({
   data = [],
   columns = [],
-  pageSize: initialPageSize = 10,
-  enableSorting = true,
-  enableFiltering = false,
-  enablePagination = true,
-  globalFilter = '',
-  onGlobalFilterChange,
-  className = '',
-  emptyMessage = 'No data found',
+  pageSize = 10,
+  searchable = false,
   onRowClick,
-  selectedRows = [],
-  enableSelection = false,
-  onSelectionChange,
+  emptyMessage = 'No data found',
+  className = '',
 }) {
   const [sorting, setSorting] = useState([])
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: initialPageSize })
-  const [rowSelection, setRowSelection] = useState({})
-
-  const selectionColumn = useMemo(() => {
-    if (!enableSelection) return []
-    return [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <input
-            type="checkbox"
-            checked={table.getIsAllRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-            className="rounded border-[var(--color-border)] accent-[var(--color-accent)]"
-          />
-        ),
-        cell: ({ row }) => (
-          <input
-            type="checkbox"
-            checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
-            className="rounded border-[var(--color-border)] accent-[var(--color-accent)]"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ),
-        size: 40,
-        enableSorting: false,
-      },
-    ]
-  }, [enableSelection])
-
-  const allColumns = useMemo(
-    () => [...selectionColumn, ...columns],
-    [selectionColumn, columns]
-  )
+  const [globalFilter, setGlobalFilter] = useState('')
 
   const table = useReactTable({
     data,
-    columns: allColumns,
-    state: {
-      sorting,
-      globalFilter,
-      pagination,
-      rowSelection,
-    },
+    columns,
+    state: { sorting, globalFilter },
     onSortingChange: setSorting,
-    onPaginationChange: setPagination,
-    onRowSelectionChange: (updater) => {
-      const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
-      setRowSelection(newSelection)
-      onSelectionChange?.(
-        Object.keys(newSelection)
-          .filter((k) => newSelection[k])
-          .map((idx) => data[parseInt(idx)])
-      )
-    },
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
-    getFilteredRowModel: enableFiltering || globalFilter ? getFilteredRowModel() : undefined,
-    getPaginationRowModel: enablePagination ? getPaginationRowModel() : undefined,
-    enableRowSelection: enableSelection,
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize } },
   })
 
-  const rows = table.getRowModel().rows
+  const SortIcon = ({ column }) => {
+    if (!column.getCanSort()) return null
+    const sorted = column.getIsSorted()
+    if (sorted === 'asc') return <ChevronUp className="w-3.5 h-3.5" />
+    if (sorted === 'desc') return <ChevronDown className="w-3.5 h-3.5" />
+    return <ChevronsUpDown className="w-3.5 h-3.5 text-slate-300" />
+  }
 
   return (
     <div className={className}>
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      {searchable && (
+        <div className="mb-4">
+          <input
+            type="text"
+            value={globalFilter ?? ''}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder="Search..."
+            className="w-full max-w-xs px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white
+              placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500"
+          />
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-lg border border-slate-200">
+        <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b border-[var(--color-border)]">
+              <tr key={headerGroup.id} className="border-b border-slate-200 bg-slate-50/80">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`
-                      px-4 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider
-                      ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-[var(--color-text-secondary)]' : ''}
-                    `}
-                    style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                     onClick={header.column.getToggleSortingHandler()}
+                    className={`
+                      px-4 py-3 text-left font-medium text-slate-600
+                      ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-slate-900' : ''}
+                    `}
                   >
                     <div className="flex items-center gap-1">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && (
-                        <span className="ml-1">
-                          {header.column.getIsSorted() === 'asc' ? (
-                            <ChevronUp className="w-3.5 h-3.5" />
-                          ) : header.column.getIsSorted() === 'desc' ? (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          ) : (
-                            <ChevronsUpDown className="w-3.5 h-3.5 opacity-40" />
-                          )}
-                        </span>
-                      )}
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      <SortIcon column={header.column} />
                     </div>
                   </th>
                 ))}
@@ -131,26 +81,25 @@ export default function DataTable({
             ))}
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={allColumns.length} className="px-4 py-12 text-center">
-                  <p className="text-sm text-[var(--color-text-muted)]">{emptyMessage}</p>
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-400">
+                  {emptyMessage}
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className={`
-                    border-b border-[var(--color-border)] last:border-b-0
-                    transition-colors duration-100
-                    ${onRowClick ? 'cursor-pointer hover:bg-[var(--color-bg-hover)]' : ''}
-                    ${row.getIsSelected() ? 'bg-[var(--color-accent-muted)]' : ''}
-                  `}
                   onClick={() => onRowClick?.(row.original)}
+                  className={`
+                    border-b border-slate-100 last:border-0
+                    ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : ''}
+                    transition-colors
+                  `}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
+                    <td key={cell.id} className="px-4 py-3 text-slate-700">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -161,54 +110,23 @@ export default function DataTable({
         </table>
       </div>
 
-      {/* Pagination */}
-      {enablePagination && table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
-          <div className="text-xs text-[var(--color-text-muted)]">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({data.length} total)
-          </div>
+      {table.getPageCount() > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm">
+          <span className="text-slate-500">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            {Array.from({ length: Math.min(table.getPageCount(), 5) }, (_, i) => {
-              const currentPage = table.getState().pagination.pageIndex
-              const totalPages = table.getPageCount()
-              let page
-              if (totalPages <= 5) {
-                page = i
-              } else if (currentPage < 3) {
-                page = i
-              } else if (currentPage > totalPages - 4) {
-                page = totalPages - 5 + i
-              } else {
-                page = currentPage - 2 + i
-              }
-              return (
-                <button
-                  key={page}
-                  onClick={() => table.setPageIndex(page)}
-                  className={`
-                    w-8 h-8 rounded-[var(--radius-md)] text-xs font-medium transition-colors
-                    ${
-                      page === currentPage
-                        ? 'bg-[var(--color-accent)] text-[var(--color-accent-text)]'
-                        : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
-                    }
-                  `}
-                >
-                  {page + 1}
-                </button>
-              )
-            })}
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

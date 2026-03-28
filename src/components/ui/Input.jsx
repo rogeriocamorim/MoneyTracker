@@ -1,63 +1,81 @@
-import { forwardRef } from 'react'
+import { forwardRef, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
-const Input = forwardRef(function Input(
-  {
-    label,
-    error,
-    hint,
-    icon: Icon,
-    iconRight: IconRight,
-    className = '',
-    containerClassName = '',
-    size = 'md',
-    ...props
-  },
-  ref
-) {
+const Input = forwardRef(({
+  label,
+  error,
+  hint,
+  icon: Icon,
+  iconRight: IconRight,
+  type = 'text',
+  size = 'md',
+  className = '',
+  wrapperClassName = '',
+  required = false,
+  ...props
+}, ref) => {
+  const [showPassword, setShowPassword] = useState(false)
+  const isPassword = type === 'password'
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type
+
   const sizeClasses = {
-    sm: 'py-1.5 text-xs',
-    md: 'py-2.5 text-sm',
-    lg: 'py-3 text-base',
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-3.5 py-2 text-sm',
+    lg: 'px-4 py-2.5 text-base',
   }
 
-  const inputClasses = `
-    w-full bg-[var(--color-bg-input)] border border-[var(--color-border)]
-    rounded-[var(--radius-lg)] text-[var(--color-text-primary)]
-    placeholder:text-[var(--color-text-muted)]
-    transition-all duration-[var(--transition-fast)]
-    focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-muted)]
-    disabled:opacity-50 disabled:cursor-not-allowed
-    ${error ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger-muted)]' : ''}
-    ${Icon ? 'pl-10' : 'pl-3.5'}
-    ${IconRight ? 'pr-10' : 'pr-3.5'}
-    ${sizeClasses[size]}
-    ${className}
-  `
-
   return (
-    <div className={`${containerClassName}`}>
+    <div className={`space-y-1.5 ${wrapperClassName}`}>
       {label && (
-        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">
+        <label className="block text-sm font-medium text-slate-700">
           {label}
+          {required && <span className="text-danger-500 ml-0.5">*</span>}
         </label>
       )}
       <div className="relative">
         {Icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none">
-            <Icon className="w-4 h-4" />
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Icon className="w-4 h-4 text-slate-400" />
           </div>
         )}
-        <input ref={ref} className={inputClasses} {...props} />
-        {IconRight && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-            <IconRight className="w-4 h-4" />
+        <input
+          ref={ref}
+          type={inputType}
+          className={`
+            block w-full rounded-lg border bg-white
+            transition-colors duration-150 ease-in-out
+            placeholder:text-slate-400
+            focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50
+            ${error ? 'border-danger-300 focus:ring-danger-500/40 focus:border-danger-500' : 'border-slate-200 hover:border-slate-300'}
+            ${Icon ? 'pl-10' : ''}
+            ${isPassword || IconRight ? 'pr-10' : ''}
+            ${type === 'number' ? 'font-number' : ''}
+            ${sizeClasses[size]}
+            ${className}
+          `}
+          {...props}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        )}
+        {IconRight && !isPassword && (
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <IconRight className="w-4 h-4 text-slate-400" />
           </div>
         )}
       </div>
-      {error && <p className="mt-1 text-xs text-[var(--color-danger)]">{error}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>}
+      {error && <p className="text-xs text-danger-600">{error}</p>}
+      {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
     </div>
   )
 })
 
+Input.displayName = 'Input'
 export default Input

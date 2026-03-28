@@ -5,58 +5,153 @@ export const expenseCategories = [
   { id: 'entertainment', name: 'Entertainment', icon: 'Gamepad2', color: '#a855f7' },
   { id: 'shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#ec4899' },
   { id: 'health', name: 'Health', icon: 'Heart', color: '#ef4444' },
-  { id: 'education', name: 'Education', icon: 'GraduationCap', color: '#14b8a6' },
-  { id: 'dining', name: 'Dining Out', icon: 'Coffee', color: '#f59e0b' },
-  { id: 'subscriptions', name: 'Subscriptions', icon: 'Repeat', color: '#8b5cf6' },
-  { id: 'housing', name: 'Housing', icon: 'Home', color: '#6366f1' },
-  { id: 'insurance', name: 'Insurance', icon: 'Shield', color: '#0ea5e9' },
+  { id: 'housing', name: 'Housing / Rent', icon: 'Home', color: '#6366f1' },
+  { id: 'education', name: 'Education', icon: 'GraduationCap', color: '#0ea5e9' },
   { id: 'personal', name: 'Personal Care', icon: 'Sparkles', color: '#f472b6' },
-  { id: 'gifts', name: 'Gifts & Donations', icon: 'Gift', color: '#22c55e' },
-  { id: 'travel', name: 'Travel', icon: 'Plane', color: '#06b6d4' },
-  { id: 'other', name: 'Other', icon: 'MoreHorizontal', color: '#94918b' },
-]
-
-export const paymentMethods = [
-  { id: 'bank', name: 'Bank Account', icon: 'Landmark', color: '#6366f1' },
-  { id: 'visa', name: 'Visa Credit Card', icon: 'CreditCard', color: '#4f46e5' },
-  { id: 'mastercard', name: 'MasterCard', icon: 'CreditCard', color: '#e11d48' },
+  { id: 'subscriptions', name: 'Subscriptions', icon: 'CreditCard', color: '#8b5cf6' },
+  { id: 'travel', name: 'Travel', icon: 'Plane', color: '#14b8a6' },
+  { id: 'gifts', name: 'Gifts & Donations', icon: 'Gift', color: '#f43f5e' },
+  { id: 'insurance', name: 'Insurance', icon: 'Shield', color: '#64748b' },
+  { id: 'wife_business', name: "Wife's Business", icon: 'Store', color: '#f472b6' },
+  { id: 'other', name: 'Other', icon: 'MoreHorizontal', color: '#94a3b8' },
 ]
 
 export const incomeSources = [
-  { id: 'daily_job', name: 'Daily Job', icon: 'Briefcase', color: '#10b981' },
-  { id: 'business', name: 'Personal Business', icon: 'Building2', color: '#8b5cf6' },
-  { id: 'wife_business', name: "Wife's Business", icon: 'Store', color: '#f472b6' },
-  { id: 'investments', name: 'Investments', icon: 'TrendingUp', color: '#6366f1' },
+  { id: 'salary', name: 'Salary', icon: 'Briefcase', color: '#10b981' },
   { id: 'freelance', name: 'Freelance', icon: 'Laptop', color: '#f59e0b' },
-  { id: 'other', name: 'Other', icon: 'Wallet', color: '#94918b' },
+  { id: 'investments', name: 'Investments', icon: 'TrendingUp', color: '#6366f1' },
+  { id: 'business', name: 'Business', icon: 'Store', color: '#f472b6' },
+  { id: 'other', name: 'Other', icon: 'Wallet', color: '#94a3b8' },
 ]
 
-// No default budgets - user sets these up during onboarding or manually
-export const defaultBudgets = {}
+export const paymentMethods = [
+  { id: 'debit', name: 'Debit Card', icon: 'CreditCard' },
+  { id: 'credit', name: 'Credit Card', icon: 'CreditCard' },
+  { id: 'cash', name: 'Cash', icon: 'Banknote' },
+  { id: 'etransfer', name: 'e-Transfer', icon: 'ArrowRightLeft' },
+  { id: 'other', name: 'Other', icon: 'MoreHorizontal' },
+]
 
-// Get category by ID, checking both predefined and custom categories
+export const accountTypes = [
+  { id: 'chequing', name: 'Chequing', icon: 'Landmark' },
+  { id: 'savings', name: 'Savings', icon: 'PiggyBank' },
+  { id: 'credit', name: 'Credit Card', icon: 'CreditCard' },
+  { id: 'investment', name: 'Investment', icon: 'TrendingUp' },
+  { id: 'cash', name: 'Cash', icon: 'Banknote' },
+]
+
+/**
+ * Maps old MoneyTracker v1 category IDs to v2 IDs.
+ * Covers common aliases and slight naming differences.
+ */
+export const categoryAliases = {
+  // Old food-related
+  dining: 'food',
+  groceries: 'food',
+  'food & dining': 'food',
+  'food_dining': 'food',
+  restaurant: 'food',
+  restaurants: 'food',
+  // Old transport-related
+  transportation: 'transport',
+  gas: 'transport',
+  fuel: 'transport',
+  auto: 'transport',
+  car: 'transport',
+  transit: 'transport',
+  // Old utilities
+  bills: 'utilities',
+  'bills & utilities': 'utilities',
+  electricity: 'utilities',
+  internet: 'utilities',
+  phone: 'utilities',
+  // Old entertainment
+  fun: 'entertainment',
+  leisure: 'entertainment',
+  movies: 'entertainment',
+  games: 'entertainment',
+  // Old housing
+  rent: 'housing',
+  mortgage: 'housing',
+  home: 'housing',
+  // Old health
+  medical: 'health',
+  healthcare: 'health',
+  gym: 'health',
+  fitness: 'health',
+  // Old education
+  school: 'education',
+  tuition: 'education',
+  books: 'education',
+  courses: 'education',
+  // Old personal
+  clothing: 'personal',
+  clothes: 'personal',
+  beauty: 'personal',
+  haircut: 'personal',
+  // Old subscriptions
+  subscription: 'subscriptions',
+  streaming: 'subscriptions',
+  membership: 'subscriptions',
+  // Old gifts
+  donation: 'gifts',
+  donations: 'gifts',
+  charity: 'gifts',
+  gift: 'gifts',
+  // Old travel
+  vacation: 'travel',
+  trips: 'travel',
+  flight: 'travel',
+  hotel: 'travel',
+}
+
+/**
+ * Resolve a category ID, checking aliases for old v1 data.
+ */
+export const resolveCategoryId = (id) => {
+  if (!id) return id
+  return categoryAliases[id.toLowerCase()] || id
+}
+
 export const getCategoryById = (id, customCategories = []) => {
-  // First check predefined categories
-  const predefined = expenseCategories.find(c => c.id === id)
+  // Try direct match first
+  const predefined = expenseCategories.find((c) => c.id === id)
   if (predefined) return predefined
-  
-  // Then check custom categories
-  const custom = customCategories.find(c => c.id === id)
-  if (custom) return { ...custom, icon: 'Tag' } // Custom categories use Tag icon
-  
-  // Return a fallback for unknown categories
-  if (id) {
-    return { id, name: id.replace(/^custom_/, '').replace(/_/g, ' '), icon: 'Tag', color: '#94918b' }
+
+  // Try alias resolution
+  const resolvedId = resolveCategoryId(id)
+  if (resolvedId !== id) {
+    const aliased = expenseCategories.find((c) => c.id === resolvedId)
+    if (aliased) return aliased
   }
-  
+
+  const custom = customCategories.find((c) => c.id === id)
+  if (custom) return { ...custom, icon: custom.icon || 'Tag' }
+
+  if (id) {
+    return {
+      id,
+      name: id.replace(/^custom_/, '').replace(/_/g, ' '),
+      icon: 'Tag',
+      color: '#94a3b8',
+    }
+  }
+
   return null
 }
 
-// Get all categories (predefined + custom)
 export const getAllCategories = (customCategories = []) => {
-  const customWithIcon = customCategories.map(c => ({ ...c, icon: 'Tag' }))
+  const customWithIcon = customCategories.map((c) => ({
+    ...c,
+    icon: c.icon || 'Tag',
+  }))
   return [...expenseCategories, ...customWithIcon]
 }
 
-export const getPaymentMethodById = (id) => paymentMethods.find(p => p.id === id)
-export const getIncomeSourceById = (id) => incomeSources.find(s => s.id === id)
+export const getIncomeSourceById = (id) => {
+  return incomeSources.find((s) => s.id === id) || { id, name: id, icon: 'Wallet', color: '#94a3b8' }
+}
+
+export const getPaymentMethodById = (id) => {
+  return paymentMethods.find((p) => p.id === id) || { id, name: id, icon: 'MoreHorizontal' }
+}

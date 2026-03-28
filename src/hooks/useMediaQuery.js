@@ -1,47 +1,27 @@
 import { useState, useEffect } from 'react'
 
-/**
- * Hook that tracks a CSS media query.
- * @param {string} query - CSS media query string, e.g. '(min-width: 1024px)'
- * @returns {boolean} Whether the media query matches
- */
 export function useMediaQuery(query) {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.matchMedia(query).matches
-  })
+  const [matches, setMatches] = useState(false)
 
   useEffect(() => {
-    const mql = window.matchMedia(query)
-    const handler = (e) => setMatches(e.matches)
+    const media = window.matchMedia(query)
+    setMatches(media.matches)
 
-    // Set initial value
-    setMatches(mql.matches)
-
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
+    const listener = (e) => setMatches(e.matches)
+    media.addEventListener('change', listener)
+    return () => media.removeEventListener('change', listener)
   }, [query])
 
   return matches
 }
 
-/**
- * Convenience hook: returns true when viewport >= 1024px (lg breakpoint)
- */
-export function useIsDesktop() {
-  return useMediaQuery('(min-width: 1024px)')
-}
+export const useDebounce = (value, delay = 300) => {
+  const [debouncedValue, setDebouncedValue] = useState(value)
 
-/**
- * Convenience hook: returns true when viewport >= 768px (md breakpoint)
- */
-export function useIsTablet() {
-  return useMediaQuery('(min-width: 768px)')
-}
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
 
-/**
- * Convenience hook: returns true when viewport < 768px
- */
-export function useIsMobile() {
-  return useMediaQuery('(max-width: 767px)')
+  return debouncedValue
 }

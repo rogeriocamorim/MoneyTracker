@@ -25,3 +25,6 @@ dist-ssr
 
 # Node compile cache
 node-compile-cache
+
+*storybook.log
+storybook-static

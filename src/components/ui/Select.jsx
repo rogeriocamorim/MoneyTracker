@@ -1,72 +1,74 @@
 import { forwardRef } from 'react'
+import { ChevronDown } from 'lucide-react'
 
-const Select = forwardRef(function Select(
-  {
-    label,
-    error,
-    hint,
-    options = [],
-    placeholder = 'Select an option',
-    className = '',
-    containerClassName = '',
-    size = 'md',
-    ...props
-  },
-  ref
-) {
+const Select = forwardRef(({
+  label,
+  error,
+  hint,
+  options = [],
+  placeholder = 'Select...',
+  size = 'md',
+  icon: Icon,
+  className = '',
+  wrapperClassName = '',
+  required = false,
+  ...props
+}, ref) => {
   const sizeClasses = {
-    sm: 'py-1.5 text-xs',
-    md: 'py-2.5 text-sm',
-    lg: 'py-3 text-base',
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-3.5 py-2 text-sm',
+    lg: 'px-4 py-2.5 text-base',
   }
 
-  const selectClasses = `
-    w-full bg-[var(--color-bg-input)] border border-[var(--color-border)]
-    rounded-[var(--radius-lg)] text-[var(--color-text-primary)]
-    px-3.5 appearance-none cursor-pointer
-    transition-all duration-[var(--transition-fast)]
-    focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-muted)]
-    disabled:opacity-50 disabled:cursor-not-allowed
-    ${error ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger-muted)]' : ''}
-    ${sizeClasses[size]}
-    ${className}
-  `
-
   return (
-    <div className={containerClassName}>
+    <div className={`space-y-1.5 ${wrapperClassName}`}>
       {label && (
-        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">
+        <label className="block text-sm font-medium text-slate-700">
           {label}
+          {required && <span className="text-danger-500 ml-0.5">*</span>}
         </label>
       )}
       <div className="relative">
-        <select ref={ref} className={selectClasses} {...props}>
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
+        {Icon && (
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Icon className="w-4 h-4 text-slate-400" />
+          </div>
+        )}
+        <select
+          ref={ref}
+          className={`
+            block w-full rounded-lg border bg-white appearance-none cursor-pointer
+            transition-colors duration-150 ease-in-out
+            focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50
+            ${error ? 'border-danger-300 focus:ring-danger-500/40 focus:border-danger-500' : 'border-slate-200 hover:border-slate-300'}
+            ${Icon ? 'pl-10' : ''}
+            pr-10
+            ${sizeClasses[size]}
+            ${className}
+          `}
+          {...props}
+        >
+          {placeholder && <option value="">{placeholder}</option>}
           {options.map((opt) => {
-            const value = typeof opt === 'string' ? opt : opt.value
-            const label = typeof opt === 'string' ? opt : opt.label
+            const value = typeof opt === 'object' ? opt.value : opt
+            const optLabel = typeof opt === 'object' ? opt.label : opt
             return (
               <option key={value} value={value}>
-                {label}
+                {optLabel}
               </option>
             )
           })}
         </select>
-        {/* Chevron icon */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-muted)]">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <ChevronDown className="w-4 h-4 text-slate-400" />
         </div>
       </div>
-      {error && <p className="mt-1 text-xs text-[var(--color-danger)]">{error}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>}
+      {error && <p className="text-xs text-danger-600">{error}</p>}
+      {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
     </div>
   )
 })
 
+Select.displayName = 'Select'
 export default Select

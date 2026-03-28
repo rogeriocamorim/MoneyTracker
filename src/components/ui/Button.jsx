@@ -1,73 +1,62 @@
 import { forwardRef } from 'react'
+import { Loader2 } from 'lucide-react'
 
-const sizeClasses = {
-  sm: 'px-3 py-1.5 text-xs gap-1.5',
-  md: 'px-4 py-2.5 text-sm gap-2',
-  lg: 'px-5 py-3 text-base gap-2',
+const variants = {
+  primary: 'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 shadow-sm shadow-primary-500/20',
+  secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-300',
+  outline: 'border border-slate-200 text-slate-700 hover:bg-slate-50 active:bg-slate-100',
+  ghost: 'text-slate-600 hover:bg-slate-100 active:bg-slate-200',
+  danger: 'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm shadow-danger-500/20',
+  success: 'bg-success-500 text-white hover:bg-success-600 active:bg-success-700 shadow-sm shadow-success-500/20',
 }
 
-const variantClasses = {
-  primary:
-    'bg-[var(--color-accent)] text-[var(--color-accent-text)] hover:bg-[var(--color-accent-hover)] shadow-sm active:scale-[0.98]',
-  secondary:
-    'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-border-hover)]',
-  outline:
-    'bg-transparent text-[var(--color-accent)] border border-[var(--color-accent)] hover:bg-[var(--color-accent-muted)]',
-  ghost:
-    'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]',
-  danger:
-    'bg-[var(--color-danger-muted)] text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white',
-  success:
-    'bg-[var(--color-success-muted)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-white',
+const sizes = {
+  xs: 'px-2 py-1 text-xs gap-1',
+  sm: 'px-3 py-1.5 text-sm gap-1.5',
+  md: 'px-4 py-2 text-sm gap-2',
+  lg: 'px-5 py-2.5 text-base gap-2',
+  xl: 'px-6 py-3 text-base gap-2.5',
 }
 
-const Button = forwardRef(function Button(
-  {
-    children,
-    variant = 'primary',
-    size = 'md',
-    className = '',
-    disabled = false,
-    loading = false,
-    icon: Icon,
-    iconRight: IconRight,
-    ...props
-  },
-  ref
-) {
+const Button = forwardRef(({
+  variant = 'primary',
+  size = 'md',
+  loading = false,
+  disabled = false,
+  icon: Icon,
+  iconRight: IconRight,
+  children,
+  className = '',
+  ...props
+}, ref) => {
+  const isDisabled = disabled || loading
+
   return (
     <button
       ref={ref}
-      disabled={disabled || loading}
+      disabled={isDisabled}
       className={`
-        inline-flex items-center justify-center font-medium rounded-[var(--radius-lg)]
-        transition-all duration-[var(--transition-fast)] cursor-pointer
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-base)]
+        inline-flex items-center justify-center font-medium rounded-lg
+        transition-all duration-200 ease-in-out
+        focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:ring-offset-2
         disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none
-        ${sizeClasses[size]}
-        ${variantClasses[variant]}
+        cursor-pointer
+        ${variants[variant]}
+        ${sizes[size]}
         ${className}
       `}
       {...props}
     >
       {loading ? (
-        <svg
-          className="animate-spin h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+        <Loader2 className="w-4 h-4 animate-spin" />
       ) : Icon ? (
-        <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+        <Icon className="w-4 h-4 shrink-0" />
       ) : null}
       {children}
-      {IconRight && !loading && <IconRight className="w-4 h-4 shrink-0" aria-hidden="true" />}
+      {IconRight && !loading && <IconRight className="w-4 h-4 shrink-0" />}
     </button>
   )
 })
 
+Button.displayName = 'Button'
 export default Button

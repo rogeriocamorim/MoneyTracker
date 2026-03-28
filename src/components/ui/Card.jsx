@@ -1,77 +1,56 @@
 import { forwardRef } from 'react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-/**
- * Card — versatile container with header/body/footer slots.
- *
- * Variants:
- *   default   – white bg + subtle border + shadow
- *   stat      – colored left border accent
- *   flat      – no shadow, border only
- */
-
-const Card = forwardRef(function Card(
-  { children, className = '', variant = 'default', padding = true, ...props },
-  ref
-) {
-  const base =
-    'rounded-[var(--radius-xl)] border border-[var(--color-border)] transition-colors duration-[var(--transition-base)]'
-
-  const variants = {
-    default: `bg-[var(--color-bg-subtle)] shadow-[var(--shadow-card)] ${padding ? 'p-5 sm:p-6' : ''}`,
-    stat: `bg-[var(--color-bg-subtle)] shadow-[var(--shadow-card)] ${padding ? 'p-5 sm:p-6' : ''}`,
-    flat: `bg-[var(--color-bg-subtle)] ${padding ? 'p-5 sm:p-6' : ''}`,
-  }
-
-  return (
-    <div ref={ref} className={`${base} ${variants[variant]} ${className}`} {...props}>
-      {children}
-    </div>
-  )
-})
-
-function CardHeader({ children, className = '', action, ...props }) {
-  return (
-    <div className={`flex items-center justify-between mb-4 ${className}`} {...props}>
-      <div>{children}</div>
-      {action && <div>{action}</div>}
-    </div>
-  )
-}
-
-function CardTitle({ children, className = '', ...props }) {
-  return (
-    <h3 className={`text-base font-semibold text-[var(--color-text-primary)] ${className}`} {...props}>
-      {children}
-    </h3>
-  )
-}
-
-function CardDescription({ children, className = '', ...props }) {
-  return (
-    <p className={`text-sm text-[var(--color-text-muted)] mt-1 ${className}`} {...props}>
-      {children}
-    </p>
-  )
-}
-
-function CardBody({ children, className = '', ...props }) {
-  return (
-    <div className={className} {...props}>
-      {children}
-    </div>
-  )
-}
-
-function CardFooter({ children, className = '', ...props }) {
+const Card = forwardRef(({ children, className = '', hover = false, padding = true, ...props }, ref) => {
   return (
     <div
-      className={`mt-4 pt-4 border-t border-[var(--color-border)] ${className}`}
+      ref={ref}
+      className={`
+        bg-white rounded-xl border border-slate-200
+        ${padding ? 'p-5' : ''}
+        ${hover ? 'hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer' : ''}
+        ${className}
+      `}
       {...props}
     >
       {children}
     </div>
   )
+})
+
+Card.displayName = 'Card'
+
+function StatCard({ label, value, icon: Icon, trend, trendLabel, iconColor = 'text-primary-500', iconBg = 'bg-primary-50', className = '' }) {
+  const trendDirection = trend > 0 ? 'up' : trend < 0 ? 'down' : 'neutral'
+  const TrendIcon = trendDirection === 'up' ? TrendingUp : trendDirection === 'down' ? TrendingDown : Minus
+  const trendColor = trendDirection === 'up' ? 'text-success-600' : trendDirection === 'down' ? 'text-danger-600' : 'text-slate-400'
+  const trendBg = trendDirection === 'up' ? 'bg-success-50' : trendDirection === 'down' ? 'bg-danger-50' : 'bg-slate-50'
+
+  return (
+    <Card className={`${className}`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-semibold font-number text-slate-900">{value}</p>
+          {trend !== undefined && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-medium rounded-full ${trendColor} ${trendBg}`}>
+                <TrendIcon className="w-3 h-3" />
+                {Math.abs(trend).toFixed(1)}%
+              </span>
+              {trendLabel && <span className="text-xs text-slate-400">{trendLabel}</span>}
+            </div>
+          )}
+        </div>
+        {Icon && (
+          <div className={`p-2.5 rounded-lg ${iconBg}`}>
+            <Icon className={`w-5 h-5 ${iconColor}`} />
+          </div>
+        )}
+      </div>
+    </Card>
+  )
 }
 
 export default Card
-export { CardHeader, CardTitle, CardDescription, CardBody, CardFooter }
+export { StatCard }

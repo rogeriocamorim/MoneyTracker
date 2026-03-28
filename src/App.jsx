@@ -1,105 +1,85 @@
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { MoneyProvider, useMoney } from './context/MoneyContext'
-import { ThemeProvider } from './context/ThemeContext'
-import Layout from './components/Layout/Layout'
-import Dashboard from './components/Dashboard'
-import ExpenseList from './components/ExpenseList'
-import IncomeList from './components/IncomeList'
-import BudgetManager from './components/BudgetManager'
-import Compare from './components/Compare'
-import Settings from './components/Settings'
-import Onboarding from './components/Onboarding'
-import MobileScannerPage from './components/MobileScannerPage'
+import { lazy, Suspense } from 'react'
+import { MoneyProvider, useMoney } from '@/context/MoneyContext'
+import { ThemeProvider } from '@/context/ThemeContext'
+import Layout from '@/components/layout/Layout'
+import { Spinner } from '@/components/ui'
 
-function AppRoutes() {
-  const { state } = useMoney()
-  const location = useLocation()
+// Lazy-loaded page components for code splitting
+const Dashboard = lazy(() => import('@/components/dashboard/Dashboard'))
+const TransactionsPage = lazy(() => import('@/components/transactions/TransactionsPage'))
+const IncomePage = lazy(() => import('@/components/income/IncomePage'))
+const BudgetsPage = lazy(() => import('@/components/budgets/BudgetsPage'))
+const GoalsPage = lazy(() => import('@/components/goals/GoalsPage'))
+const ReportsPage = lazy(() => import('@/components/reports/ReportsPage'))
+const SettingsPage = lazy(() => import('@/components/settings/SettingsPage'))
+const Onboarding = lazy(() => import('@/components/onboarding/Onboarding'))
 
-  // Always allow access to mobile scanner route
-  if (location.pathname === '/scan-receipt') {
-    return <MobileScannerPage />
-  }
-
-  // Show loading state while data is being loaded
-  if (!state.isLoaded) {
-    return (
-      <div className="min-h-screen min-h-dvh bg-[var(--color-bg-base)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[var(--color-text-muted)]">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show onboarding if setup is not complete
-  if (!state.setupComplete) {
-    return <Onboarding />
-  }
-
-  // Show main app routes
+function PageSpinner() {
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="expenses" element={<ExpenseList />} />
-        <Route path="income" element={<IncomeList />} />
-        <Route path="budget" element={<BudgetManager />} />
-        <Route path="compare" element={<Compare />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
-      <Route path="/scan-receipt" element={<MobileScannerPage />} />
-    </Routes>
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Spinner size="lg" />
+    </div>
   )
 }
 
 function AppContent() {
+  const { state } = useMoney()
+
+  if (!state.isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (!state.setupComplete) {
+    return (
+      <Suspense fallback={<PageSpinner />}>
+        <Onboarding />
+      </Suspense>
+    )
+  }
+
   return (
-    <HashRouter>
-      <AppRoutes />
-    </HashRouter>
+    <Suspense fallback={<PageSpinner />}>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/income" element={<IncomePage />} />
+          <Route path="/budgets" element={<BudgetsPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
   )
 }
 
-function App() {
+export default function App() {
   return (
-    <ThemeProvider>
-      <MoneyProvider>
-        <Toaster
-          position="top-center"
-          gutter={8}
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: 'var(--color-bg-elevated)',
-              color: 'var(--color-text-primary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-xl)',
-              fontSize: '14px',
-              padding: '12px 16px',
-              boxShadow: 'var(--shadow-lg)',
-              maxWidth: '420px',
-              lineHeight: '1.5',
-            },
-            success: {
-              iconTheme: {
-                primary: 'var(--color-success)',
-                secondary: 'white',
+    <BrowserRouter>
+      <ThemeProvider>
+        <MoneyProvider>
+          <AppContent />
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                borderRadius: '0.75rem',
+                background: '#0f172a',
+                color: '#f8fafc',
+                fontSize: '0.875rem',
               },
-            },
-            error: {
-              iconTheme: {
-                primary: 'var(--color-danger)',
-                secondary: 'white',
-              },
-            },
-          }}
-        />
-        <AppContent />
-      </MoneyProvider>
-    </ThemeProvider>
+            }}
+          />
+        </MoneyProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   )
 }
-
-export default App

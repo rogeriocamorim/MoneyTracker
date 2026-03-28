@@ -1,77 +1,53 @@
-import { Moon, Sun, Monitor } from 'lucide-react'
-import { useTheme } from '../../context/ThemeContext'
+import { useState } from 'react'
 
-/**
- * Generic toggle switch
- */
-export function Toggle({
+export default function Toggle({
   checked = false,
   onChange,
   label,
+  description,
   size = 'md',
   disabled = false,
   className = '',
 }) {
-  const sizeMap = {
+  const sizeClasses = {
     sm: { track: 'w-8 h-4', thumb: 'w-3 h-3', translate: 'translate-x-4' },
     md: { track: 'w-10 h-5', thumb: 'w-4 h-4', translate: 'translate-x-5' },
     lg: { track: 'w-12 h-6', thumb: 'w-5 h-5', translate: 'translate-x-6' },
   }
 
-  const s = sizeMap[size]
+  const s = sizeClasses[size]
 
   return (
-    <label className={`inline-flex items-center gap-2 cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}>
+    <label className={`inline-flex items-start gap-3 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`}>
       <button
+        type="button"
         role="switch"
         aria-checked={checked}
-        disabled={disabled}
         onClick={() => !disabled && onChange?.(!checked)}
+        disabled={disabled}
         className={`
-          relative inline-flex items-center shrink-0 ${s.track}
-          rounded-full transition-colors duration-200 ease-in-out
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2
-          ${checked ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-bg-muted)]'}
+          relative inline-flex shrink-0 rounded-full transition-colors duration-200 ease-in-out
+          focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:ring-offset-2
+          ${s.track}
+          ${checked ? 'bg-primary-500' : 'bg-slate-200'}
+          ${disabled ? '' : 'cursor-pointer'}
         `}
       >
         <span
           className={`
-            inline-block ${s.thumb} rounded-full bg-white shadow-sm
-            transform transition-transform duration-200 ease-in-out
+            inline-block rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out
+            ${s.thumb}
             ${checked ? s.translate : 'translate-x-0.5'}
+            mt-0.5
           `}
         />
       </button>
-      {label && <span className="text-sm text-[var(--color-text-primary)]">{label}</span>}
-    </label>
-  )
-}
-
-/**
- * Theme toggle button
- */
-export function ThemeToggle({ className = '' }) {
-  const { theme, toggleTheme } = useTheme()
-
-  return (
-    <button
-      onClick={toggleTheme}
-      role="switch"
-      aria-checked={theme === 'dark'}
-      className={`
-        p-2 rounded-[var(--radius-lg)] transition-colors
-        text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]
-        hover:bg-[var(--color-bg-hover)]
-        ${className}
-      `}
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-    >
-      {theme === 'dark' ? (
-        <Sun className="w-5 h-5" />
-      ) : (
-        <Moon className="w-5 h-5" />
+      {(label || description) && (
+        <div className="flex flex-col">
+          {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
+          {description && <span className="text-xs text-slate-500">{description}</span>}
+        </div>
       )}
-    </button>
+    </label>
   )
 }

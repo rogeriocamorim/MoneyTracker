@@ -1,69 +1,83 @@
-import { motion } from 'framer-motion'
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts'
-import { Card, CardHeader, CardTitle } from '../ui'
-import { formatCurrency } from '../../utils/calculations'
+import { useMemo } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import Card from '@/components/ui/Card'
+import { useMoney } from '@/context/MoneyContext'
+import { formatCurrency, formatCompactCurrency } from '@/utils/calculations'
 
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-}
+export default function CashFlowChart() {
+  const { state } = useMoney()
+  const { expenses, income, settings } = state
+  const currency = settings?.currencySymbol || '$'
 
-function ChartTooltip({ active, payload, label }) {
-  if (active && payload && payload.length) {
+  const data = useMemo(() => {
+    const now = new Date()
+    const months = []
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const month = d.getMonth()
+      const year = d.getFullYear()
+      const label = d.toLocaleString('en-US', { month: 'short' })
+
+      const monthIncome = income
+        .filter((item) => {
+          const id = new Date(item.date)
+          return id.getMonth() === month && id.getFullYear() === year
+        })
+        .reduce((s, item) => s + item.amount, 0)
+
+      const monthExpenses = expenses
+        .filter((item) => {
+          const id = new Date(item.date)
+          return id.getMonth() === month && id.getFullYear() === year
+        })
+        .reduce((s, item) => s + item.amount, 0)
+
+      months.push({
+        name: label,
+        income: monthIncome,
+        expenses: monthExpenses,
+        net: monthIncome - monthExpenses,
+      })
+    }
+
+    return months
+  }, [expenses, income])
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null
     return (
-      <div className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] p-3">
-        <p className="text-xs text-[var(--color-text-muted)] mb-2">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-[13px] font-mono font-medium" style={{ color: entry.color }}>
-            {entry.name}: {formatCurrency(entry.value)}
+      <div className="bg-white rounded-lg shadow-lg border border-slate-200 px-3 py-2 text-sm">
+        <p className="font-medium text-slate-900 mb-1">{label}</p>
+        {payload.map((p) => (
+          <p key={p.dataKey} className="font-number" style={{ color: p.color }}>
+            {p.dataKey === 'income' ? 'Income' : 'Expenses'}: {formatCurrency(p.value, currency)}
           </p>
         ))}
       </div>
     )
   }
-  return null
-}
 
-export default function CashFlowChart({ trendData }) {
   return (
-    <motion.div variants={item}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Cash Flow Trend</CardTitle>
-        </CardHeader>
-        <div style={{ width: '100%', height: 280 }}>
-          <ResponsiveContainer>
-            <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-success)" stopOpacity={0.3}/>
-                  <stop offset="100%" stopColor="var(--color-success)" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-danger)" stopOpacity={0.3}/>
-                  <stop offset="100%" stopColor="var(--color-danger)" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="shortMonth" stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="var(--color-text-muted)" tick={{ fontSize: 12 }} tickFormatter={v => `$${v}`} axisLine={false} tickLine={false} width={50} />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend iconType="circle" wrapperStyle={{ paddingTop: 16 }} />
-              <Area type="monotone" dataKey="income" name="Income" stroke="var(--color-success)" strokeWidth={2} fill="url(#incomeGradient)" dot={false} />
-              <Area type="monotone" dataKey="expenses" name="Expenses" stroke="var(--color-danger)" strokeWidth={2} fill="url(#expenseGradient)" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-    </motion.div>
+    <Card>
+      <h3 className="text-sm font-semibold text-slate-900 mb-4">Cash Flow (6 Months)</h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} barGap={4}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => formatCompactCurrency(v, currency)}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={32} name="Income" />
+            <Bar dataKey="expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={32} name="Expenses" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
   )
 }
