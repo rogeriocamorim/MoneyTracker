@@ -335,7 +335,7 @@ function ExpenseForm({ initial, customCategories = [], goals = [], onSave, onCan
         options={paymentMethods.map((p) => ({ value: p.id, label: p.name }))}
         placeholder="Select payment method..."
       />
-      <Input label="Account" value={form.account} onChange={update('account')} placeholder="e.g. CIBC Visa, Chequing (optional)" />
+      <Input label="Account" value={form.account} onChange={update('account')} required placeholder="e.g. CIBC Visa, Chequing" />
       <Input label="Notes" value={form.notes} onChange={update('notes')} placeholder="Additional notes..." />
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
