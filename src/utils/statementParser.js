@@ -6,17 +6,20 @@
  * rows and uses column x-positions to distinguish DATE, DESCRIPTION, DEBIT,
  * CREDIT, and RUNNING BALANCE.
  *
- * Two-pass approach:
+ * Three-pass approach:
+ *   Pass 0: Auto-detect column x-positions from header rows ("DATE", "DEBIT",
+ *           "CREDIT", "RUNNING BALANCE", "TRANSACTIONS") to derive thresholds.
  *   Pass 1: Classify all rows into columns, filter noise, collect into
  *           transaction blocks (delimited by date-column entries).
  *   Pass 2: Parse each block to extract date, description, amounts, and type.
  *
- * Column x-positions (from real CIBC PDF analysis):
- *   DATE:            x ≈ 62
- *   DESCRIPTION:     x ≈ 129
- *   DEBIT:           x ≈ 326-346
- *   CREDIT:          x ≈ 422-436
- *   RUNNING BALANCE: x ≈ 531-536
+ * Column positions are auto-detected from the PDF header. Fallback defaults
+ * are used if detection fails:
+ *   DATE:            x ≈ 54-62
+ *   DESCRIPTION:     x ≈ 105-129
+ *   DEBIT:           x ≈ 268-346
+ *   CREDIT:          x ≈ 335-436
+ *   RUNNING BALANCE: x ≈ 370-536
  */
 
 import * as pdfjsLib from 'pdfjs-dist'
@@ -27,11 +30,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).href
 
-// --- Column boundary thresholds (x-positions) ---
-const DESC_MIN = 115
-const DEBIT_MIN = 300
-const CREDIT_MIN = 400
-const BALANCE_MIN = 490
+// --- Fallback column boundary thresholds (x-positions) ---
+const DEFAULT_DESC_MIN = 115
+const DEFAULT_DEBIT_MIN = 300
+const DEFAULT_CREDIT_MIN = 400
+const DEFAULT_BALANCE_MIN = 490
 
 // Month abbreviation map
 const MONTHS = {
@@ -134,13 +137,67 @@ async function extractPositionedRows(file) {
     row.items.sort((a, b) => a.x - b.x)
   }
 
-  return { rows, rawFirstPage }
+  return { rows, rawFirstPage, allItems }
 }
 
 /**
- * Classify row items into columns based on x-position.
+ * Auto-detect column x-positions from header rows in the PDF.
+ *
+ * Scans all text items for the keywords "DATE", "TRANSACTIONS", "DEBIT",
+ * "CREDIT", and "RUNNING BALANCE". These appear as column headers in the
+ * CIBC statement and their x-positions define the column layout.
+ *
+ * Returns thresholds: { descMin, debitMin, creditMin, balanceMin }
+ * Each threshold is the midpoint between the detected header x-positions
+ * of adjacent columns.
  */
-function classifyRow(items) {
+function detectColumnThresholds(allItems) {
+  // Collect candidate x-positions for each header keyword.
+  // Headers repeat on each page, so take the first occurrence.
+  let dateX = null
+  let descX = null
+  let debitX = null
+  let creditX = null
+  let balanceX = null
+
+  for (const item of allItems) {
+    const s = item.str.trim().toUpperCase()
+    if (s === 'DATE' && dateX === null) dateX = item.x
+    if (s === 'TRANSACTIONS' && descX === null) descX = item.x
+    if (s === 'DEBIT' && debitX === null) debitX = item.x
+    if (s === 'CREDIT' && creditX === null) creditX = item.x
+    if (s === 'RUNNING BALANCE' && balanceX === null) balanceX = item.x
+  }
+
+  // Need at least DATE + DEBIT to derive useful thresholds
+  if (dateX === null || debitX === null) {
+    return {
+      descMin: DEFAULT_DESC_MIN,
+      debitMin: DEFAULT_DEBIT_MIN,
+      creditMin: DEFAULT_CREDIT_MIN,
+      balanceMin: DEFAULT_BALANCE_MIN,
+    }
+  }
+
+  // Derive midpoint thresholds between adjacent column headers.
+  // If a column header wasn't found, fall back to default.
+  const effectiveDescX = descX ?? dateX + 50
+  const effectiveCreditX = creditX ?? debitX + 60
+  const effectiveBalanceX = balanceX ?? effectiveCreditX + 40
+
+  return {
+    descMin: Math.round((dateX + effectiveDescX) / 2),
+    debitMin: Math.round((effectiveDescX + debitX) / 2),
+    creditMin: Math.round((debitX + effectiveCreditX) / 2),
+    balanceMin: Math.round((effectiveCreditX + effectiveBalanceX) / 2),
+  }
+}
+
+/**
+ * Classify row items into columns based on x-position thresholds.
+ */
+function classifyRow(items, thresholds) {
+  const { descMin, debitMin, creditMin, balanceMin } = thresholds
   let dateText = ''
   let descText = ''
   let debitText = ''
@@ -151,13 +208,13 @@ function classifyRow(items) {
     const s = item.str.trim()
     if (!s) continue
 
-    if (item.x < DESC_MIN) {
+    if (item.x < descMin) {
       dateText += (dateText ? ' ' : '') + s
-    } else if (item.x < DEBIT_MIN) {
+    } else if (item.x < debitMin) {
       descText += (descText ? ' ' : '') + s
-    } else if (item.x < CREDIT_MIN) {
+    } else if (item.x < creditMin) {
       debitText += (debitText ? ' ' : '') + s
-    } else if (item.x < BALANCE_MIN) {
+    } else if (item.x < balanceMin) {
       creditText += (creditText ? ' ' : '') + s
     } else {
       balanceText += (balanceText ? ' ' : '') + s
@@ -292,23 +349,24 @@ function inferPaymentMethod(rawDescription) {
 
 /**
  * Check if a row is a table header row.
+ * Looks for "DATE" as a standalone item near the left edge (x < 80)
+ * and "DEBIT" somewhere in the same row.
  */
-function isHeaderRow(cl) {
-  const combined = (
-    cl.dateText + ' ' + cl.descText + ' ' + cl.debitText +
-    ' ' + cl.creditText + ' ' + cl.balanceText
-  ).toUpperCase()
-  return combined.includes('DATE') && combined.includes('DEBIT')
+function isHeaderRow(row) {
+  const hasDate = row.items.some(
+    (i) => i.str.trim().toUpperCase() === 'DATE' && i.x < 80
+  )
+  const hasDebit = row.items.some(
+    (i) => i.str.trim().toUpperCase() === 'DEBIT'
+  )
+  return hasDate && hasDebit
 }
 
 /**
- * Check if a row is noise.
+ * Check if a row is noise (non-transaction content).
  */
-function isNoiseRow(cl) {
-  const combined = (
-    cl.dateText + ' ' + cl.descText + ' ' + cl.debitText +
-    ' ' + cl.creditText + ' ' + cl.balanceText
-  )
+function isNoiseRow(row) {
+  const combined = row.items.map((i) => i.str.trim()).join(' ')
   const upper = combined.toUpperCase()
   return (
     upper.includes('DEPOSIT ACCOUNT DETAILS') ||
@@ -334,6 +392,29 @@ function isNoiseRow(cl) {
     upper.includes('SERVICE CHARGES AND ACCOUNT') ||
     upper.includes('A CIBC BANKING CENTRE') ||
     upper.includes('FOR A DESCRIPTION') ||
+    upper.includes('ADDITIONAL FILTERING') ||
+    upper.includes('FILTER BY DATE') ||
+    upper.includes('TRANSACTION TYPE') ||
+    upper.includes('FROM LOWER LIMIT') ||
+    upper.includes('TO UPPER LIMIT') ||
+    upper.includes('MANAGE MY ACCOUNT') ||
+    upper.includes('CHANGE ACCOUNT TYPE') ||
+    upper.includes('PRODUCT NAME') ||
+    upper.includes('TRANSIT NUMBER') ||
+    upper.includes('INSTITUTION NUMBER') ||
+    upper.includes('STATEMENT OPTION') ||
+    upper.includes('FUNDS ON HOLD') ||
+    upper.includes('OVERDRAFT LIMIT') ||
+    upper.includes('AVAILABLE FUNDS') ||
+    upper.includes('DAILY ATM WITHDRAWAL') ||
+    upper.includes('DAILY DEBIT PURCHASE') ||
+    upper.includes('ACCESS TO DEPOSITED') ||
+    upper.includes('SMART ACCOUNT TIER') ||
+    upper.includes('WIRE TRANSFER BANK') ||
+    upper.includes('RECEIVE NOTIFICATIONS') ||
+    upper.includes('HOLD PERIOD') ||
+    upper.includes('LEARN MORE ABOUT') ||
+    upper.includes('POINT OF SALE') ||
     combined.match(/^\d+\/\d+\/\d+/)
   )
 }
@@ -406,7 +487,10 @@ function parseBlock(blockRows) {
  * @returns {Promise<{ transactions: ParsedTransaction[], dateRange: string, accountInfo: string }>}
  */
 export async function parseCIBCStatement(file) {
-  const { rows, rawFirstPage } = await extractPositionedRows(file)
+  const { rows, rawFirstPage, allItems } = await extractPositionedRows(file)
+
+  // --- Pass 0: Auto-detect column thresholds from header keywords ---
+  const thresholds = detectColumnThresholds(allItems)
 
   // Extract account info from first page raw text
   let accountInfo = ''
@@ -421,20 +505,19 @@ export async function parseCIBCStatement(file) {
   )
   if (rangeMatch) dateRange = rangeMatch[0]
 
-  // --- Pass 1: Classify rows and collect into transaction blocks ---
+  // --- Pass 1: Filter noise/headers and classify transaction rows ---
   const classifiedRows = []
   let inTransactionArea = false
 
   for (const row of rows) {
-    const cl = classifyRow(row.items)
-
-    if (isNoiseRow(cl)) continue
-    if (isHeaderRow(cl)) {
+    if (isNoiseRow(row)) continue
+    if (isHeaderRow(row)) {
       inTransactionArea = true
       continue
     }
     if (!inTransactionArea) continue
 
+    const cl = classifyRow(row.items, thresholds)
     classifiedRows.push(cl)
   }
 
