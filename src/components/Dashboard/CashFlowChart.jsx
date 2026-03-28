@@ -62,7 +62,7 @@ export default function CashFlowChart() {
     <Card>
       <h3 className="text-sm font-semibold text-slate-900 mb-4">Cash Flow (6 Months)</h3>
       <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <BarChart data={data} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />

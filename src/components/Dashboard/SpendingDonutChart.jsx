@@ -57,7 +57,7 @@ export default function SpendingDonutChart() {
       ) : (
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="w-48 h-48">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={data}

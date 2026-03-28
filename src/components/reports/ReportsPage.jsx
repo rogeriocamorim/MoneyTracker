@@ -87,7 +87,7 @@ export default function ReportsPage() {
       <Card>
         <h3 className="text-sm font-semibold text-slate-900 mb-4">Income vs Expenses Trend</h3>
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
@@ -130,7 +130,7 @@ export default function ReportsPage() {
       <Card>
         <h3 className="text-sm font-semibold text-slate-900 mb-4">Monthly Comparison</h3>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={monthlyData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
