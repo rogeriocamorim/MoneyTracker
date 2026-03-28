@@ -49,14 +49,14 @@ export default function StatementImport({ open, onClose }) {
   // Category options for expense rows (predefined + custom)
   const expenseCategoryOptions = useMemo(() => [
     ...expenseCategories.map((c) => ({ value: c.id, label: c.name })),
-    ...(customCategories || []).map((c) => ({ value: c.id, label: c.name })),
+    ...(customCategories || []).filter((c) => c.type === 'expense').map((c) => ({ value: c.id, label: c.name })),
   ], [customCategories])
 
-  // Category options for income rows
-  const incomeSourceOptions = useMemo(() =>
-    incomeSources.map((s) => ({ value: s.id, label: s.name })),
-    []
-  )
+  // Category options for income rows (predefined + custom)
+  const incomeSourceOptions = useMemo(() => [
+    ...incomeSources.map((s) => ({ value: s.id, label: s.name })),
+    ...(customCategories || []).filter((c) => c.type === 'income').map((c) => ({ value: c.id, label: c.name })),
+  ], [customCategories])
 
   const reset = useCallback(() => {
     setStep(0)

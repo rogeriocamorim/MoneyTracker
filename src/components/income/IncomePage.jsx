@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { Plus, Search, Wallet, ChevronDown, ChevronRight } from 'lucide-react'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency } from '@/utils/calculations'
-import { incomeSources, getIncomeSourceById } from '@/data/categories'
-import { Button, Input, Select, Badge, EmptyState, Modal } from '@/components/ui'
+import { incomeSources, getIncomeSourceById, getAllIncomeSources } from '@/data/categories'
+import { Button, Input, Select, Badge, EmptyState, Modal, SearchSelect } from '@/components/ui'
 import IncomeTable from './IncomeTable'
 
 function groupByMonth(items) {
@@ -29,7 +29,7 @@ function groupByMonth(items) {
 
 export default function IncomePage() {
   const { state, dispatch } = useMoney()
-  const { income, settings } = state
+  const { income, settings, customCategories } = state
   const currency = settings?.currencySymbol || '$'
 
   const [search, setSearch] = useState('')
@@ -41,8 +41,9 @@ export default function IncomePage() {
     let result = [...income]
     if (search) {
       const s = search.toLowerCase()
+      const customIncome = (customCategories || []).filter((c) => c.type === 'income')
       result = result.filter((item) => {
-        const src = getIncomeSourceById(item.source)
+        const src = getIncomeSourceById(item.source, customIncome)
         return (
           item.description?.toLowerCase().includes(s) ||
           src?.name?.toLowerCase().includes(s) ||
@@ -51,7 +52,7 @@ export default function IncomePage() {
       })
     }
     return result.sort((a, b) => new Date(b.date) - new Date(a.date))
-  }, [income, search])
+  }, [income, search, customCategories])
 
   const totalFiltered = filtered.reduce((s, item) => s + item.amount, 0)
   const monthGroups = useMemo(() => groupByMonth(filtered), [filtered])
@@ -158,6 +159,7 @@ export default function IncomePage() {
       >
         <IncomeForm
           initial={editingItem}
+          customCategories={customCategories}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingItem(null) }}
         />
@@ -166,7 +168,10 @@ export default function IncomePage() {
   )
 }
 
-function IncomeForm({ initial, onSave, onCancel }) {
+function IncomeForm({ initial, customCategories = [], onSave, onCancel }) {
+  const allSources = getAllIncomeSources(customCategories)
+  const sourceOptions = allSources.map((s) => ({ value: s.id, label: s.name }))
+
   const [form, setForm] = useState({
     date: initial?.date || new Date().toISOString().slice(0, 10),
     amount: initial?.amount || '',
@@ -191,13 +196,14 @@ function IncomeForm({ initial, onSave, onCancel }) {
         <Input label="Date" type="date" value={form.date} onChange={update('date')} required />
         <Input label="Amount" type="number" step="0.01" min="0" value={form.amount} onChange={update('amount')} required placeholder="0.00" />
       </div>
-      <Select
+      <SearchSelect
         label="Source"
         value={form.source}
         onChange={update('source')}
         required
-        options={incomeSources.map((s) => ({ value: s.id, label: s.name }))}
+        options={sourceOptions}
         placeholder="Select source..."
+        searchPlaceholder="Search income sources..."
       />
       <Input label="Description" value={form.description} onChange={update('description')} placeholder="What is this income from?" />
       <Input label="Notes" value={form.notes} onChange={update('notes')} placeholder="Additional notes..." />

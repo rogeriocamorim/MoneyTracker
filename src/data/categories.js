@@ -148,8 +148,30 @@ export const getAllCategories = (customCategories = []) => {
   return [...expenseCategories, ...customWithIcon]
 }
 
-export const getIncomeSourceById = (id) => {
-  return incomeSources.find((s) => s.id === id) || { id, name: id, icon: 'Wallet', color: '#94a3b8' }
+export const getIncomeSourceById = (id, customSources = []) => {
+  const predefined = incomeSources.find((s) => s.id === id)
+  if (predefined) return predefined
+
+  const custom = customSources.find((c) => c.id === id)
+  if (custom) return { ...custom, icon: custom.icon || 'Wallet' }
+
+  if (id) {
+    return {
+      id,
+      name: id.replace(/^custom_/, '').replace(/_/g, ' '),
+      icon: 'Wallet',
+      color: '#94a3b8',
+    }
+  }
+
+  return null
+}
+
+export const getAllIncomeSources = (customSources = []) => {
+  const customWithIcon = customSources
+    .filter((c) => c.type === 'income')
+    .map((c) => ({ ...c, icon: c.icon || 'Wallet' }))
+  return [...incomeSources, ...customWithIcon]
 }
 
 export const getPaymentMethodById = (id) => {
