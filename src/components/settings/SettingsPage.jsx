@@ -289,10 +289,10 @@ function DataManagement({ state, dispatch }) {
         <Button variant="outline" size="sm" icon={Download} onClick={handleExport}>
           Export JSON
         </Button>
-        <Button variant="outline" size="sm" icon={Upload} onClick={() => importRef.current?.click()}>
+        <Button variant="outline" size="sm" icon={Upload} type="button" onClick={() => { importRef.current?.click() }}>
           Import JSON
         </Button>
-        <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+        <input ref={importRef} type="file" accept=".json,application/json" onChange={handleImport} className="hidden" style={{ display: 'none' }} />
       </div>
     </Card>
   )
