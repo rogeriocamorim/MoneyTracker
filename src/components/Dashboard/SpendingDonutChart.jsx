@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { parseISO } from 'date-fns'
+import { parseISO, format, subMonths, addMonths } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import { useMoney } from '@/context/MoneyContext'
 import { getTotalByCategory, formatCurrency } from '@/utils/calculations'
@@ -17,13 +18,16 @@ export default function SpendingDonutChart() {
   const { expenses, settings, customCategories = [], categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
 
-  const now = new Date()
+  const [selectedDate, setSelectedDate] = useState(new Date())
+
+  const selectedMonth = selectedDate.getMonth()
+  const selectedYear = selectedDate.getFullYear()
 
   const data = useMemo(() => {
     const byCategory = getTotalByCategory(
       expenses.filter((e) => {
         const d = parseISO(e.date)
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+        return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
       })
     )
 
@@ -34,9 +38,12 @@ export default function SpendingDonutChart() {
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 10)
-  }, [expenses, customCategories, categoryOverrides])
+  }, [expenses, customCategories, categoryOverrides, selectedMonth, selectedYear])
 
   const total = data.reduce((s, d) => s + d.value, 0)
+
+  const isCurrentMonth =
+    selectedMonth === new Date().getMonth() && selectedYear === new Date().getFullYear()
 
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) return null
@@ -52,9 +59,31 @@ export default function SpendingDonutChart() {
 
   return (
     <Card>
-      <h3 className="text-sm font-semibold text-slate-900 mb-4">Spending by Category</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-slate-900">Spending by Category</h3>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSelectedDate((d) => subMonths(d, 1))}
+            className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs font-medium text-slate-600 min-w-[90px] text-center">
+            {format(selectedDate, 'MMM yyyy')}
+          </span>
+          <button
+            onClick={() => setSelectedDate((d) => addMonths(d, 1))}
+            disabled={isCurrentMonth}
+            className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
       {data.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No expenses this month</p>
+        <p className="text-sm text-slate-400 text-center py-8">
+          No expenses in {format(selectedDate, 'MMMM yyyy')}
+        </p>
       ) : (
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="w-48 h-48">
@@ -91,6 +120,15 @@ export default function SpendingDonutChart() {
                 </span>
               </div>
             ))}
+            {total > 0 && (
+              <div className="flex items-center gap-2 text-sm pt-1 border-t border-slate-100">
+                <span className="w-2.5 h-2.5 shrink-0" />
+                <span className="text-slate-500 font-medium flex-1">Total</span>
+                <span className="font-number text-slate-900 font-semibold">
+                  {formatCurrency(total, currency)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

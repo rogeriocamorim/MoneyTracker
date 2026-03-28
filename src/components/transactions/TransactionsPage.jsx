@@ -42,7 +42,7 @@ export default function TransactionsPage() {
   const [selectedTx, setSelectedTx] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [editingTx, setEditingTx] = useState(null)
-  const [filters, setFilters] = useState({ category: '', paymentMethod: '', dateFrom: '', dateTo: '' })
+  const [filters, setFilters] = useState({ category: '', paymentMethod: '', account: '', dateFrom: '', dateTo: '' })
   const [collapsedMonths, setCollapsedMonths] = useState({})
   const [showImport, setShowImport] = useState(false)
 
@@ -64,6 +64,7 @@ export default function TransactionsPage() {
 
     if (filters.category) result = result.filter((tx) => tx.category === filters.category)
     if (filters.paymentMethod) result = result.filter((tx) => tx.paymentMethod === filters.paymentMethod)
+    if (filters.account) result = result.filter((tx) => tx.account === filters.account)
     if (filters.dateFrom) result = result.filter((tx) => tx.date >= filters.dateFrom)
     if (filters.dateTo) result = result.filter((tx) => tx.date <= filters.dateTo)
 
@@ -72,6 +73,12 @@ export default function TransactionsPage() {
 
   const totalFiltered = filtered.reduce((s, tx) => s + tx.amount, 0)
   const monthGroups = useMemo(() => groupByMonth(filtered), [filtered])
+
+  // Derive unique account names for filter dropdown
+  const uniqueAccounts = useMemo(() => {
+    const set = new Set(expenses.map((tx) => tx.account).filter(Boolean))
+    return [...set].sort()
+  }, [expenses])
 
   const toggleMonth = (key) => {
     setCollapsedMonths((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -117,7 +124,7 @@ export default function TransactionsPage() {
     setEditingTx(null)
   }
 
-  const clearFilters = () => setFilters({ category: '', paymentMethod: '', dateFrom: '', dateTo: '' })
+  const clearFilters = () => setFilters({ category: '', paymentMethod: '', account: '', dateFrom: '', dateTo: '' })
   const hasFilters = Object.values(filters).some(Boolean)
 
   return (
@@ -160,6 +167,7 @@ export default function TransactionsPage() {
           onChange={setFilters}
           onClear={clearFilters}
           customCategories={customCategories}
+          accounts={uniqueAccounts}
         />
       )}
 
@@ -278,6 +286,7 @@ function ExpenseForm({ initial, customCategories = [], goals = [], onSave, onCan
     category: initial?.goalId ? `${GOAL_PREFIX}${initial.goalId}` : initial?.category || '',
     description: initial?.description || '',
     paymentMethod: initial?.paymentMethod || '',
+    account: initial?.account || '',
     notes: initial?.notes || '',
   })
 
@@ -326,6 +335,7 @@ function ExpenseForm({ initial, customCategories = [], goals = [], onSave, onCan
         options={paymentMethods.map((p) => ({ value: p.id, label: p.name }))}
         placeholder="Select payment method..."
       />
+      <Input label="Account" value={form.account} onChange={update('account')} placeholder="e.g. CIBC Visa, Chequing (optional)" />
       <Input label="Notes" value={form.notes} onChange={update('notes')} placeholder="Additional notes..." />
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>

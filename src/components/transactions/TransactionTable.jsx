@@ -9,6 +9,16 @@ import { formatCurrency } from '@/utils/calculations'
 
 const columnHelper = createColumnHelper()
 
+/** Map account name → badge color variant */
+function accountVariant(account) {
+  if (!account) return null
+  const a = account.toLowerCase()
+  if (a.includes('visa')) return 'primary'
+  if (a.includes('master')) return 'warning'
+  if (a.includes('cheq')) return 'success'
+  return 'neutral'
+}
+
 export default function TransactionTable({ data, currency, customCategories = [], categoryOverrides = {}, onRowClick, onEdit, onDelete }) {
   const columns = useMemo(() => [
     columnHelper.accessor('date', {
@@ -34,6 +44,14 @@ export default function TransactionTable({ data, currency, customCategories = []
             </p>
           </div>
         )
+      },
+    }),
+    columnHelper.accessor('account', {
+      header: 'Account',
+      cell: ({ getValue }) => {
+        const acct = getValue()
+        if (!acct) return <span className="text-xs text-slate-400">—</span>
+        return <Badge variant={accountVariant(acct)} size="sm">{acct}</Badge>
       },
     }),
     columnHelper.accessor('category', {
@@ -75,7 +93,7 @@ export default function TransactionTable({ data, currency, customCategories = []
         </div>
       ),
     }),
-  ], [currency, customCategories, onEdit, onDelete])
+  ], [currency, customCategories, categoryOverrides, onEdit, onDelete])
 
   return (
     <Table

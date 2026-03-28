@@ -13,6 +13,16 @@ import {
   saveMerchantCategories,
 } from '@/utils/merchantCategoryMap'
 
+/** Strip card number parenthetical from accountInfo: "CIBC VISA (4502 ...)" → "CIBC Visa" */
+function cleanAccountName(raw) {
+  if (!raw) return ''
+  // Remove parenthetical card number
+  let name = raw.replace(/\s*\(.*\)/, '').trim()
+  // Normalise casing: "CIBC VISA" → "CIBC Visa", "CIBC MasterCard" stays
+  name = name.replace(/\bVISA\b/i, 'Visa').replace(/\bMasterCard\b/i, 'MasterCard')
+  return name
+}
+
 const STEPS = ['Upload', 'Review', 'Done']
 
 /**
@@ -96,6 +106,8 @@ export default function StatementImport({ open, onClose }) {
 
       setParsedData(result)
 
+      const account = cleanAccountName(result.accountInfo)
+
       // Build rows with duplicate detection + auto-category
       const enrichedRows = result.transactions.map((tx, idx) => {
         const dup = isDuplicate(tx, expenses, income)
@@ -110,6 +122,7 @@ export default function StatementImport({ open, onClose }) {
           selected: !dup, // uncheck duplicates by default
           duplicate: dup,
           category: autoCategory || (tx.type === 'income' ? 'salary' : ''),
+          account,
         }
       })
 
@@ -169,6 +182,7 @@ export default function StatementImport({ open, onClose }) {
       category: r.category || 'other',
       description: r.description,
       paymentMethod: r.paymentMethod,
+      account: r.account || '',
       notes: `Imported from ${fileName}`,
     }))
 
@@ -177,6 +191,7 @@ export default function StatementImport({ open, onClose }) {
       amount: r.amount,
       source: r.category || 'other',
       description: r.description,
+      account: r.account || '',
       notes: `Imported from ${fileName}`,
     }))
 

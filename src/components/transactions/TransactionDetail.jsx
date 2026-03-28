@@ -1,4 +1,4 @@
-import { X, Pencil, Trash2, Calendar, Tag, CreditCard, FileText } from 'lucide-react'
+import { X, Pencil, Trash2, Calendar, Tag, CreditCard, FileText, Landmark } from 'lucide-react'
 import { parseISO } from 'date-fns'
 import { Button, Badge } from '@/components/ui'
 import { getCategoryById } from '@/data/categories'
@@ -42,6 +42,12 @@ export default function TransactionDetail({ transaction, currency, customCategor
         {tx.paymentMethod && (
           <DetailRow icon={CreditCard} label="Payment Method">
             <span className="capitalize">{tx.paymentMethod.replace(/_/g, ' ')}</span>
+          </DetailRow>
+        )}
+
+        {tx.account && (
+          <DetailRow icon={Landmark} label="Account">
+            {tx.account}
           </DetailRow>
         )}
 
