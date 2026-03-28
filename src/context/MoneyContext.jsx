@@ -281,6 +281,7 @@ function reducer(state, action) {
         goals: action.payload.goals || [],
         accounts: action.payload.accounts || [],
         customCategories: action.payload.customCategories || [],
+        categoryOverrides: action.payload.categoryOverrides || {},
         settings: { ...state.settings, ...(action.payload.settings || {}) },
         setupComplete: true,
       }

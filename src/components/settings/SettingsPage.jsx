@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Save, Download, Upload, Trash2, Cloud, Plus, X, Pencil, Check } from 'lucide-react'
 import { useMoney } from '@/context/MoneyContext'
 import { exportToJson, importFromJson } from '@/utils/storage'
@@ -255,6 +255,8 @@ function CategoryManager({ customCategories, categoryOverrides, dispatch }) {
 }
 
 function DataManagement({ state, dispatch }) {
+  const importRef = useRef(null)
+
   const handleExport = () => {
     const blob = exportToJson(state)
     const url = URL.createObjectURL(blob)
@@ -287,12 +289,10 @@ function DataManagement({ state, dispatch }) {
         <Button variant="outline" size="sm" icon={Download} onClick={handleExport}>
           Export JSON
         </Button>
-        <label>
-          <Button variant="outline" size="sm" icon={Upload} as="span" className="cursor-pointer">
-            Import JSON
-          </Button>
-          <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-        </label>
+        <Button variant="outline" size="sm" icon={Upload} onClick={() => importRef.current?.click()}>
+          Import JSON
+        </Button>
+        <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
       </div>
     </Card>
   )
