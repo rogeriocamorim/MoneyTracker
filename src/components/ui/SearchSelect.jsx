@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { ChevronDown, Search, X } from 'lucide-react'
+import { ChevronDown, Search, X, Plus } from 'lucide-react'
 
 export default function SearchSelect({
   label,
@@ -13,6 +13,7 @@ export default function SearchSelect({
   compact = false,
   error,
   hint,
+  onCreateOption,
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -39,8 +40,25 @@ export default function SearchSelect({
 
   const flatFiltered = useMemo(() => filtered.flatMap((o) => (o.options ? o.options : [o])), [filtered])
 
+  // Show "Create X" when onCreateOption is provided and query doesn't exactly match an existing option
+  const showCreateOption = useMemo(() => {
+    if (!onCreateOption || !query.trim()) return false
+    const q = query.trim().toLowerCase()
+    return !allFlat.some((o) => o.label.toLowerCase() === q)
+  }, [onCreateOption, query, allFlat])
+
   const handleSelect = (opt) => {
     onChange({ target: { value: opt.value } })
+    setQuery('')
+    setOpen(false)
+  }
+
+  const handleCreate = async () => {
+    if (!onCreateOption || !query.trim()) return
+    const result = await onCreateOption(query.trim())
+    if (result?.value) {
+      onChange({ target: { value: result.value } })
+    }
     setQuery('')
     setOpen(false)
   }
@@ -81,9 +99,13 @@ export default function SearchSelect({
       setOpen(false)
       setQuery('')
     }
-    if (e.key === 'Enter' && flatFiltered.length === 1) {
+    if (e.key === 'Enter') {
       e.preventDefault()
-      handleSelect(flatFiltered[0])
+      if (flatFiltered.length === 1) {
+        handleSelect(flatFiltered[0])
+      } else if (flatFiltered.length === 0 && showCreateOption) {
+        handleCreate()
+      }
     }
   }
 
@@ -152,24 +174,39 @@ export default function SearchSelect({
             </div>
 
             <ul className="max-h-48 overflow-y-auto py-1">
-              {flatFiltered.length === 0 ? (
+              {flatFiltered.length === 0 && !showCreateOption ? (
                 <li className={`${compact ? 'px-2.5 py-1.5 text-xs' : 'px-3.5 py-2 text-sm'} text-slate-400`}>No results found</li>
               ) : (
-                filtered.map((item) => {
-                  if (item.options) {
-                    return (
-                      <li key={item.label}>
-                        <div className={`${compact ? 'px-2.5 pt-2 pb-0.5' : 'px-3.5 pt-3 pb-1'} text-[11px] font-semibold uppercase tracking-wider text-slate-400`}>
-                          {item.label}
-                        </div>
-                        <ul>
-                          {item.options.map(renderOption)}
-                        </ul>
-                      </li>
-                    )
-                  }
-                  return renderOption(item)
-                })
+                <>
+                  {filtered.map((item) => {
+                    if (item.options) {
+                      return (
+                        <li key={item.label}>
+                          <div className={`${compact ? 'px-2.5 pt-2 pb-0.5' : 'px-3.5 pt-3 pb-1'} text-[11px] font-semibold uppercase tracking-wider text-slate-400`}>
+                            {item.label}
+                          </div>
+                          <ul>
+                            {item.options.map(renderOption)}
+                          </ul>
+                        </li>
+                      )
+                    }
+                    return renderOption(item)
+                  })}
+                  {showCreateOption && (
+                    <li
+                      onClick={handleCreate}
+                      className={`
+                        ${compact ? 'px-2.5 py-1.5 text-xs' : 'px-3.5 py-2 text-sm'}
+                        cursor-pointer transition-colors text-primary-600 hover:bg-primary-50
+                        flex items-center gap-1.5 font-medium border-t border-slate-100
+                      `}
+                    >
+                      <Plus className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
+                      Create "{query.trim()}"
+                    </li>
+                  )}
+                </>
               )}
             </ul>
           </div>

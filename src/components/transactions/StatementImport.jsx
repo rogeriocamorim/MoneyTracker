@@ -32,7 +32,7 @@ function isDuplicate(tx, existingExpenses, existingIncome) {
 }
 
 export default function StatementImport({ open, onClose }) {
-  const { state, bulkAddExpenses, bulkAddIncome } = useMoney()
+  const { state, bulkAddExpenses, bulkAddIncome, addCustomCategory } = useMoney()
   const { expenses, income, settings, customCategories } = state
   const currency = settings?.currencySymbol || '$'
 
@@ -148,6 +148,12 @@ export default function StatementImport({ open, onClose }) {
       r._idx === idx ? { ...r, category: categoryId } : r
     ))
   }
+
+  const handleCreateCategory = useCallback((type) => (name) => {
+    const id = `custom_${name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}`
+    addCustomCategory({ id, name, type })
+    return { value: id, label: name }
+  }, [addCustomCategory])
 
   const selectedRows = rows.filter((r) => r.selected)
   const selectedExpenses = selectedRows.filter((r) => r.type === 'expense')
@@ -383,6 +389,7 @@ export default function StatementImport({ open, onClose }) {
                         options={row.type === 'income' ? incomeSourceOptions : expenseCategoryOptions}
                         placeholder="Select..."
                         searchPlaceholder="Search categories..."
+                        onCreateOption={handleCreateCategory(row.type === 'income' ? 'income' : 'expense')}
                       />
                     </td>
                   </tr>
