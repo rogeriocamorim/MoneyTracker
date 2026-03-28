@@ -3,11 +3,11 @@ import { Toaster } from 'react-hot-toast'
 import { lazy, Suspense } from 'react'
 import { MoneyProvider, useMoney } from '@/context/MoneyContext'
 import { ThemeProvider } from '@/context/ThemeContext'
-import Layout from '@/components/layout/Layout'
+import Layout from '@/components/Layout/Layout'
 import { Spinner } from '@/components/ui'
 
 // Lazy-loaded page components for code splitting
-const Dashboard = lazy(() => import('@/components/dashboard/Dashboard'))
+const Dashboard = lazy(() => import('@/components/Dashboard/Dashboard'))
 const TransactionsPage = lazy(() => import('@/components/transactions/TransactionsPage'))
 const IncomePage = lazy(() => import('@/components/income/IncomePage'))
 const BudgetsPage = lazy(() => import('@/components/budgets/BudgetsPage'))
