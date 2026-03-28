@@ -22,6 +22,7 @@ const initialState = {
   goals: [],
   accounts: [],
   customCategories: [],
+  categoryOverrides: {},
   settings: {
     currency: 'CAD',
     currencySymbol: '$',
@@ -43,6 +44,7 @@ function reducer(state, action) {
         ...state,
         ...action.payload,
         customCategories: action.payload.customCategories || [],
+        categoryOverrides: action.payload.categoryOverrides || {},
         goals: action.payload.goals || [],
         accounts: action.payload.accounts || [],
         isLoaded: true,
@@ -250,6 +252,18 @@ function reducer(state, action) {
         customCategories: state.customCategories.filter((c) => c.id !== action.payload),
       }
 
+    case 'RENAME_CATEGORY':
+      return {
+        ...state,
+        categoryOverrides: {
+          ...state.categoryOverrides,
+          [action.payload.id]: {
+            ...(state.categoryOverrides?.[action.payload.id] || {}),
+            name: action.payload.name,
+          },
+        },
+      }
+
     // ─── Settings ────────────────────────────────
     case 'UPDATE_SETTINGS':
       return {
@@ -399,6 +413,7 @@ export function MoneyProvider({ children }) {
     addCustomCategories: (cats) => dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: cats }),
     updateCustomCategory: (cat) => dispatch({ type: 'UPDATE_CUSTOM_CATEGORY', payload: cat }),
     removeCustomCategory: (id) => dispatch({ type: 'REMOVE_CUSTOM_CATEGORY', payload: id }),
+    renameCategory: (id, name) => dispatch({ type: 'RENAME_CATEGORY', payload: { id, name } }),
     // Settings
     updateSettings: (settings) => dispatch({ type: 'UPDATE_SETTINGS', payload: settings }),
     // Bulk

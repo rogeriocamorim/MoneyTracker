@@ -7,7 +7,7 @@ import { Button, Modal, EmptyState, Select, Input, ProgressBar, Card } from '@/c
 
 export default function BudgetsPage() {
   const { state, dispatch } = useMoney()
-  const { expenses, budgets, settings, customCategories } = state
+  const { expenses, budgets, settings, customCategories, categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
   const [showForm, setShowForm] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
@@ -90,6 +90,7 @@ export default function BudgetsPage() {
               budget={b}
               currency={currency}
               customCategories={customCategories}
+              categoryOverrides={categoryOverrides}
               onEdit={() => handleEdit(b)}
               onDelete={() => handleDelete(b.category)}
             />
@@ -115,8 +116,8 @@ export default function BudgetsPage() {
   )
 }
 
-function BudgetCard({ budget, currency, customCategories, onEdit, onDelete }) {
-  const cat = getCategoryById(budget.category, customCategories)
+function BudgetCard({ budget, currency, customCategories, categoryOverrides = {}, onEdit, onDelete }) {
+  const cat = getCategoryById(budget.category, customCategories, categoryOverrides)
   const remaining = budget.budget - budget.spent
   const isOver = remaining < 0
 

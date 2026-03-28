@@ -18,12 +18,12 @@ import toast from 'react-hot-toast'
 
 export default function SettingsPage() {
   const { state, dispatch } = useMoney()
-  const { settings, customCategories = [] } = state
+  const { settings, customCategories = [], categoryOverrides = {} } = state
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
       <CurrencySettings settings={settings} dispatch={dispatch} />
-      <CategoryManager customCategories={customCategories} dispatch={dispatch} />
+      <CategoryManager customCategories={customCategories} categoryOverrides={categoryOverrides} dispatch={dispatch} />
       <DataManagement state={state} dispatch={dispatch} />
       <GoogleDriveSection settings={settings} state={state} dispatch={dispatch} />
       <DangerZone dispatch={dispatch} />
@@ -72,7 +72,7 @@ function CurrencySettings({ settings, dispatch }) {
   )
 }
 
-function CategoryManager({ customCategories, dispatch }) {
+function CategoryManager({ customCategories, categoryOverrides, dispatch }) {
   const [showModal, setShowModal] = useState(false)
   const [newCat, setNewCat] = useState({ name: '', type: 'expense' })
   const [editingId, setEditingId] = useState(null)
@@ -111,7 +111,7 @@ function CategoryManager({ customCategories, dispatch }) {
       return
     }
     dispatch({
-      type: 'UPDATE_CUSTOM_CATEGORY',
+      type: 'RENAME_CATEGORY',
       payload: { id: cat.id, name: trimmed },
     })
     setEditingId(null)
@@ -120,13 +120,15 @@ function CategoryManager({ customCategories, dispatch }) {
   }
 
   // Build unified lists: predefined + custom, grouped by type
+  // Apply categoryOverrides to display renamed names
+  const applyName = (c) => categoryOverrides[c.id]?.name || c.name
   const allExpense = [
-    ...expenseCategories.map((c) => ({ ...c, builtin: true, type: 'expense' })),
-    ...customCategories.filter((c) => c.type === 'expense').map((c) => ({ ...c, builtin: false })),
+    ...expenseCategories.map((c) => ({ ...c, builtin: true, type: 'expense', name: applyName(c) })),
+    ...customCategories.filter((c) => c.type === 'expense').map((c) => ({ ...c, builtin: false, name: applyName(c) })),
   ]
   const allIncome = [
-    ...incomeSources.map((s) => ({ ...s, builtin: true, type: 'income' })),
-    ...customCategories.filter((c) => c.type === 'income').map((c) => ({ ...c, builtin: false })),
+    ...incomeSources.map((s) => ({ ...s, builtin: true, type: 'income', name: applyName(s) })),
+    ...customCategories.filter((c) => c.type === 'income').map((c) => ({ ...c, builtin: false, name: applyName(c) })),
   ]
   const totalCount = allExpense.length + allIncome.length
 
@@ -152,33 +154,33 @@ function CategoryManager({ customCategories, dispatch }) {
           <span className="text-sm text-slate-700 truncate">{cat.name}</span>
         )}
       </div>
-      {!cat.builtin && (
-        <div className="flex items-center gap-0.5 shrink-0">
-          {editingId === cat.id ? (
-            <>
-              <button onClick={() => saveEdit(cat)} className="text-primary-500 hover:text-primary-700 cursor-pointer p-1" title="Save">
-                <Check className="w-4 h-4" />
-              </button>
-              <button onClick={cancelEdit} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1" title="Cancel">
+      <div className="flex items-center gap-0.5 shrink-0">
+        {editingId === cat.id ? (
+          <>
+            <button onClick={() => saveEdit(cat)} className="text-primary-500 hover:text-primary-700 cursor-pointer p-1" title="Save">
+              <Check className="w-4 h-4" />
+            </button>
+            <button onClick={cancelEdit} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1" title="Cancel">
+              <X className="w-4 h-4" />
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => startEdit(cat)}
+              className="text-slate-400 hover:text-primary-500 cursor-pointer p-1"
+              title="Rename"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            {!cat.builtin && (
+              <button onClick={() => handleRemove(cat.id)} className="text-slate-400 hover:text-danger-500 cursor-pointer p-1" title="Delete">
                 <X className="w-4 h-4" />
               </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => startEdit(cat)}
-                className="text-slate-400 hover:text-primary-500 cursor-pointer p-1"
-                title="Rename"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => handleRemove(cat.id)} className="text-slate-400 hover:text-danger-500 cursor-pointer p-1">
-                <X className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 

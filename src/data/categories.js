@@ -113,20 +113,27 @@ export const resolveCategoryId = (id) => {
   return categoryAliases[id.toLowerCase()] || id
 }
 
-export const getCategoryById = (id, customCategories = []) => {
+// Apply name overrides from categoryOverrides state
+const applyOverride = (cat, overrides) => {
+  if (!overrides || !cat) return cat
+  const override = overrides[cat.id]
+  return override ? { ...cat, ...override } : cat
+}
+
+export const getCategoryById = (id, customCategories = [], overrides = {}) => {
   // Try direct match first
   const predefined = expenseCategories.find((c) => c.id === id)
-  if (predefined) return predefined
+  if (predefined) return applyOverride(predefined, overrides)
 
   // Try alias resolution
   const resolvedId = resolveCategoryId(id)
   if (resolvedId !== id) {
     const aliased = expenseCategories.find((c) => c.id === resolvedId)
-    if (aliased) return aliased
+    if (aliased) return applyOverride(aliased, overrides)
   }
 
   const custom = customCategories.find((c) => c.id === id)
-  if (custom) return { ...custom, icon: custom.icon || 'Tag' }
+  if (custom) return applyOverride({ ...custom, icon: custom.icon || 'Tag' }, overrides)
 
   if (id) {
     return {
@@ -140,20 +147,20 @@ export const getCategoryById = (id, customCategories = []) => {
   return null
 }
 
-export const getAllCategories = (customCategories = []) => {
+export const getAllCategories = (customCategories = [], overrides = {}) => {
   const customWithIcon = customCategories.map((c) => ({
     ...c,
     icon: c.icon || 'Tag',
   }))
-  return [...expenseCategories, ...customWithIcon]
+  return [...expenseCategories, ...customWithIcon].map((c) => applyOverride(c, overrides))
 }
 
-export const getIncomeSourceById = (id, customSources = []) => {
+export const getIncomeSourceById = (id, customSources = [], overrides = {}) => {
   const predefined = incomeSources.find((s) => s.id === id)
-  if (predefined) return predefined
+  if (predefined) return applyOverride(predefined, overrides)
 
   const custom = customSources.find((c) => c.id === id)
-  if (custom) return { ...custom, icon: custom.icon || 'Wallet' }
+  if (custom) return applyOverride({ ...custom, icon: custom.icon || 'Wallet' }, overrides)
 
   if (id) {
     return {
@@ -167,11 +174,11 @@ export const getIncomeSourceById = (id, customSources = []) => {
   return null
 }
 
-export const getAllIncomeSources = (customSources = []) => {
+export const getAllIncomeSources = (customSources = [], overrides = {}) => {
   const customWithIcon = customSources
     .filter((c) => c.type === 'income')
     .map((c) => ({ ...c, icon: c.icon || 'Wallet' }))
-  return [...incomeSources, ...customWithIcon]
+  return [...incomeSources, ...customWithIcon].map((c) => applyOverride(c, overrides))
 }
 
 export const getPaymentMethodById = (id) => {

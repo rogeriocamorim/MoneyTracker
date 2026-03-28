@@ -8,7 +8,7 @@ import { formatCurrency } from '@/utils/calculations'
 
 const columnHelper = createColumnHelper()
 
-export default function IncomeTable({ data, currency, onEdit, onDelete }) {
+export default function IncomeTable({ data, currency, customCategories = [], categoryOverrides = {}, onEdit, onDelete }) {
   const columns = useMemo(() => [
     columnHelper.accessor('date', {
       header: 'Date',
@@ -30,7 +30,8 @@ export default function IncomeTable({ data, currency, onEdit, onDelete }) {
     columnHelper.accessor('source', {
       header: 'Source',
       cell: ({ getValue }) => {
-        const src = getIncomeSourceById(getValue())
+        const customIncome = customCategories.filter((c) => c.type === 'income')
+        const src = getIncomeSourceById(getValue(), customIncome, categoryOverrides)
         return src ? (
           <Badge variant="success" size="sm">{src.name}</Badge>
         ) : (
@@ -66,7 +67,7 @@ export default function IncomeTable({ data, currency, onEdit, onDelete }) {
         </div>
       ),
     }),
-  ], [currency, onEdit, onDelete])
+  ], [currency, customCategories, categoryOverrides, onEdit, onDelete])
 
   return (
     <Table

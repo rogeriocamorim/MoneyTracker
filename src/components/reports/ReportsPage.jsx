@@ -7,7 +7,7 @@ import { Card, Select } from '@/components/ui'
 
 export default function ReportsPage() {
   const { state } = useMoney()
-  const { expenses, income, settings } = state
+  const { expenses, income, settings, customCategories = [], categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
   const [period, setPeriod] = useState('6')
 
@@ -43,11 +43,11 @@ export default function ReportsPage() {
 
     return Object.entries(byCategory)
       .map(([id, amount]) => {
-        const cat = getCategoryById(id)
+        const cat = getCategoryById(id, customCategories, categoryOverrides)
         return { name: cat?.name || id, amount, color: cat?.color || '#94a3b8' }
       })
       .sort((a, b) => b.amount - a.amount)
-  }, [expenses, months])
+  }, [expenses, months, customCategories, categoryOverrides])
 
   const totalExpenses = categoryBreakdown.reduce((s, c) => s + c.amount, 0)
 

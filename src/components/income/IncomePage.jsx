@@ -29,7 +29,7 @@ function groupByMonth(items) {
 
 export default function IncomePage() {
   const { state, dispatch } = useMoney()
-  const { income, settings, customCategories } = state
+  const { income, settings, customCategories, categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
 
   const [search, setSearch] = useState('')
@@ -43,7 +43,7 @@ export default function IncomePage() {
       const s = search.toLowerCase()
       const customIncome = (customCategories || []).filter((c) => c.type === 'income')
       result = result.filter((item) => {
-        const src = getIncomeSourceById(item.source, customIncome)
+        const src = getIncomeSourceById(item.source, customIncome, categoryOverrides)
         return (
           item.description?.toLowerCase().includes(s) ||
           src?.name?.toLowerCase().includes(s) ||
@@ -143,7 +143,7 @@ export default function IncomePage() {
               </button>
               {!collapsedMonths[group.key] && (
                 <div className="border-t border-slate-100">
-                  <IncomeTable data={group.items} currency={currency} onEdit={handleEdit} onDelete={handleDelete} />
+                  <IncomeTable data={group.items} currency={currency} customCategories={customCategories} categoryOverrides={categoryOverrides} onEdit={handleEdit} onDelete={handleDelete} />
                 </div>
               )}
             </div>
@@ -160,6 +160,7 @@ export default function IncomePage() {
         <IncomeForm
           initial={editingItem}
           customCategories={customCategories}
+          categoryOverrides={categoryOverrides}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingItem(null) }}
         />
@@ -168,8 +169,8 @@ export default function IncomePage() {
   )
 }
 
-function IncomeForm({ initial, customCategories = [], onSave, onCancel }) {
-  const allSources = getAllIncomeSources(customCategories)
+function IncomeForm({ initial, customCategories = [], categoryOverrides = {}, onSave, onCancel }) {
+  const allSources = getAllIncomeSources(customCategories, categoryOverrides)
   const sourceOptions = allSources.map((s) => ({ value: s.id, label: s.name }))
 
   const [form, setForm] = useState({

@@ -33,7 +33,7 @@ function groupByMonth(items) {
 
 export default function TransactionsPage() {
   const { state, dispatch } = useMoney()
-  const { expenses, settings, customCategories, goals = [] } = state
+  const { expenses, settings, customCategories, categoryOverrides = {}, goals = [] } = state
   const currency = settings?.currencySymbol || '$'
 
   const [search, setSearch] = useState('')
@@ -51,7 +51,7 @@ export default function TransactionsPage() {
     if (search) {
       const s = search.toLowerCase()
       result = result.filter((tx) => {
-        const cat = getCategoryById(tx.category, customCategories)
+        const cat = getCategoryById(tx.category, customCategories, categoryOverrides)
         return (
           tx.description?.toLowerCase().includes(s) ||
           tx.merchant?.toLowerCase().includes(s) ||
@@ -205,6 +205,7 @@ export default function TransactionsPage() {
                     data={group.items}
                     currency={currency}
                     customCategories={customCategories}
+                    categoryOverrides={categoryOverrides}
                     onRowClick={setSelectedTx}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
@@ -222,6 +223,7 @@ export default function TransactionsPage() {
           transaction={selectedTx}
           currency={currency}
           customCategories={customCategories}
+          categoryOverrides={categoryOverrides}
           onClose={() => setSelectedTx(null)}
           onEdit={() => handleEdit(selectedTx)}
           onDelete={() => handleDelete(selectedTx.id)}

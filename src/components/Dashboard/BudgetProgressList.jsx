@@ -7,7 +7,7 @@ import { getCategoryById } from '@/data/categories'
 
 export default function BudgetProgressList() {
   const { state } = useMoney()
-  const { expenses, budgets, settings } = state
+  const { expenses, budgets, settings, customCategories = [], categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
 
   const budgetData = useMemo(() => {
@@ -24,7 +24,7 @@ export default function BudgetProgressList() {
       ) : (
         <div className="space-y-4">
           {budgetData.map((b) => {
-            const cat = getCategoryById(b.category)
+            const cat = getCategoryById(b.category, customCategories, categoryOverrides)
             return (
               <ProgressBar
                 key={b.category}

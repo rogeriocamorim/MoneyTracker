@@ -3,9 +3,9 @@ import { Button, Badge } from '@/components/ui'
 import { getCategoryById } from '@/data/categories'
 import { formatCurrency } from '@/utils/calculations'
 
-export default function TransactionDetail({ transaction, currency, customCategories, onClose, onEdit, onDelete }) {
+export default function TransactionDetail({ transaction, currency, customCategories, categoryOverrides = {}, onClose, onEdit, onDelete }) {
   const tx = transaction
-  const cat = getCategoryById(tx.category, customCategories)
+  const cat = getCategoryById(tx.category, customCategories, categoryOverrides)
 
   return (
     <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-96 bg-white shadow-xl border-l border-slate-200 flex flex-col animate-slide-up">

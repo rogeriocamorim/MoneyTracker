@@ -8,7 +8,7 @@ import { getIconComponent } from '@/utils/iconResolver'
 
 export default function RecentTransactions() {
   const { state } = useMoney()
-  const { expenses, settings } = state
+  const { expenses, settings, customCategories = [], categoryOverrides = {} } = state
   const sym = settings?.currencySymbol || '$'
   const navigate = useNavigate()
 
@@ -34,7 +34,7 @@ export default function RecentTransactions() {
       ) : (
         <div className="space-y-1">
           {recent.map((tx) => {
-            const cat = getCategoryById(tx.category)
+            const cat = getCategoryById(tx.category, customCategories, categoryOverrides)
             const Icon = getIconComponent(cat?.icon)
             return (
               <div key={tx.id} className="flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-lg hover:bg-slate-50 transition-colors">

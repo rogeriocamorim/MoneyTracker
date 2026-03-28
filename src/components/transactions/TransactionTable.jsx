@@ -8,7 +8,7 @@ import { formatCurrency } from '@/utils/calculations'
 
 const columnHelper = createColumnHelper()
 
-export default function TransactionTable({ data, currency, customCategories = [], onRowClick, onEdit, onDelete }) {
+export default function TransactionTable({ data, currency, customCategories = [], categoryOverrides = {}, onRowClick, onEdit, onDelete }) {
   const columns = useMemo(() => [
     columnHelper.accessor('date', {
       header: 'Date',
@@ -38,7 +38,7 @@ export default function TransactionTable({ data, currency, customCategories = []
     columnHelper.accessor('category', {
       header: 'Category',
       cell: ({ getValue }) => {
-        const cat = getCategoryById(getValue(), customCategories)
+        const cat = getCategoryById(getValue(), customCategories, categoryOverrides)
         return cat ? (
           <Badge variant="neutral" size="sm">{cat.name}</Badge>
         ) : (

@@ -13,7 +13,7 @@ const COLORS = [
 
 export default function SpendingDonutChart() {
   const { state } = useMoney()
-  const { expenses, settings } = state
+  const { expenses, settings, customCategories = [], categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
 
   const now = new Date()
@@ -28,12 +28,12 @@ export default function SpendingDonutChart() {
 
     return Object.entries(byCategory)
       .map(([categoryId, amount]) => {
-        const cat = getCategoryById(categoryId)
+        const cat = getCategoryById(categoryId, customCategories, categoryOverrides)
         return { name: cat?.name || categoryId, value: amount, id: categoryId }
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 10)
-  }, [expenses])
+  }, [expenses, customCategories, categoryOverrides])
 
   const total = data.reduce((s, d) => s + d.value, 0)
 
