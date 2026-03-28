@@ -89,7 +89,7 @@ export default function StatementImport({ open, onClose }) {
       const result = await parseCIBCStatement(file)
 
       if (result.transactions.length === 0) {
-        setError('No transactions found in this PDF. Make sure it\'s a CIBC checking statement printed from online banking.')
+        setError('No transactions found in this PDF. Make sure it\'s a CIBC statement (chequing or credit card) printed from online banking.')
         setParsing(false)
         return
       }
@@ -254,7 +254,7 @@ export default function StatementImport({ open, onClose }) {
                     Drop your CIBC statement PDF here
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    or click to browse — supports CIBC Online Banking print-to-PDF
+                    or click to browse — supports chequing &amp; credit card statements
                   </p>
                 </div>
               </div>
@@ -277,8 +277,8 @@ export default function StatementImport({ open, onClose }) {
           )}
 
           <p className="text-xs text-slate-400">
-            Currently supports CIBC Chequing statements. Log into CIBC Online Banking, go to 
-            Account Details, and use your browser's Print → Save as PDF.
+            Supports CIBC Chequing, Visa, and Mastercard statements. Log into CIBC Online Banking, 
+            go to Account Details, and use your browser's Print &rarr; Save as PDF.
           </p>
         </div>
       )}

@@ -480,8 +480,349 @@ function parseBlock(blockRows) {
   }
 }
 
+// =====================================================================
+// CIBC CREDIT CARD PARSER
+// =====================================================================
+//
+// Parses print-to-PDF credit card statements from CIBC Online Banking
+// (Visa and Mastercard). Layout has 3 columns:
+//   TRANSACTION DATE (x ≈ 41)  |  DETAILS (x ≈ 148)  |  AMOUNT (x ≈ 413-426)
+//
+// Each transaction spans 2+ rows:
+//   Row 1: date + merchant description
+//   Row 2: card number fragment (e.g. "5223********9150") — skip
+//   Optional: "Credit" label after negative amounts
+//   Optional: foreign currency line "USD @ 1.424553"
+//
+// Negative amounts (with − prefix) are payments/credits → type: 'income'
+// Positive amounts are purchases → type: 'expense'
+
+// Credit card column x-position thresholds
+const CC_DATE_MAX = 100    // date items are at x ≈ 41
+const CC_AMOUNT_MIN = 400  // amount items are at x ≈ 413+
+
+/**
+ * Detect if this is a credit card statement.
+ * Looks for "CIBC VISA", "CIBC MasterCard", or "CREDIT CARD DETAILS".
+ */
+function isCreditCardStatement(rawFirstPage) {
+  return (
+    rawFirstPage.includes('CREDIT CARD DETAILS') ||
+    /CIBC\s*(VISA|Visa|MasterCard|Mastercard)/i.test(rawFirstPage)
+  )
+}
+
+/**
+ * Extract credit card account info (card type + number).
+ */
+function extractCCAccountInfo(rawFirstPage) {
+  const m = rawFirstPage.match(/CIBC\s+((?:VISA|Visa|MasterCard|Mastercard)[^)]*\([^)]+\))/)
+  if (m) return `CIBC ${m[1]}`
+  const m2 = rawFirstPage.match(/CIBC\s+((?:VISA|Visa|MasterCard|Mastercard)\s*®?)/)
+  if (m2) return `CIBC ${m2[1]}`
+  return 'CIBC Credit Card'
+}
+
+/**
+ * Check if a row is a credit card transaction header.
+ * Looks for "TRANSACTION DATE" and "AMOUNT" or "DETAILS".
+ */
+function isCCHeaderRow(row) {
+  const combined = row.items.map((i) => i.str.trim().toUpperCase()).join(' ')
+  return combined.includes('TRANSACTION DATE') && (combined.includes('AMOUNT') || combined.includes('DETAILS'))
+}
+
+/**
+ * Check if a row is noise in the credit card statement.
+ */
+function isCCNoiseRow(row) {
+  const combined = row.items.map((i) => i.str.trim()).join(' ')
+  const upper = combined.toUpperCase()
+  return (
+    upper.includes('CREDIT CARD DETAILS') ||
+    upper.includes('CIBC ONLINE BANKING') ||
+    upper.includes('TRANSACTION GLOSSARY') ||
+    upper.includes('QUESTIONS ABOUT') ||
+    upper.includes('PAST TRANSACTIONS') ||
+    upper.includes('CUSTOM SEARCH') ||
+    upper.includes('LAST 4 WEEKS') ||
+    upper.includes('LAST 3 MONTHS') ||
+    upper.includes('LAST 6 MONTHS') ||
+    upper.includes('LAST 12 MONTHS') ||
+    upper.includes('HTTPS://') ||
+    upper.includes('ADDITIONAL FILTERING') ||
+    upper.includes('FILTER BY DATE') ||
+    upper.includes('FILTER BY MONTH') ||
+    upper.includes('TRANSACTION TYPE') ||
+    upper.includes('TRANSACTION LOCATION') ||
+    upper.includes('FROM LOWER LIMIT') ||
+    upper.includes('TO UPPER LIMIT') ||
+    upper.includes('CATEGORY:') ||
+    upper.includes('GET DETAILS') ||
+    upper.includes('CREDIT DETAILS') ||
+    upper.includes('STATEMENT DETAILS') ||
+    upper.includes('PAYMENT DETAILS') ||
+    upper.includes('CREDIT LIMIT:') ||
+    upper.includes('CREDIT AVAILABLE:') ||
+    upper.includes('CURRENT BALANCE') ||
+    upper.includes('AMOUNT DUE') ||
+    upper.includes('MINIMUM PAYMENT') ||
+    upper.includes('DUE DATE:') ||
+    upper.includes('STATEMENT DATE:') ||
+    upper.includes('LAST PAYMENT') ||
+    upper.includes('STATEMENT OPTION') ||
+    upper.includes('MANAGE MY CARD') ||
+    upper.includes('SPEND REPORT') ||
+    upper.includes('PERSONAL SPEND MANAGER') ||
+    upper.includes('CASH BACK BALANCE') ||
+    upper.includes('GIFT CERTIFICATE') ||
+    upper.includes('LOCK MY CARD') ||
+    upper.includes('LEARN MORE') ||
+    upper.includes('CHECK STATUS') ||
+    upper.includes('ACCOUNT NICKNAME') ||
+    upper.includes('VIEW ESTATEMENTS') ||
+    upper.includes('VIEW AND EDIT') ||
+    upper.includes('PAY CARD') ||
+    upper.includes('VIEW:') ||
+    upper.includes('SET UP A') ||
+    upper.includes('APPLY FOR') ||
+    upper.includes('SHARE YOUR') ||
+    upper.includes('ADD A CARDHOLDER') ||
+    upper.includes('PROTECT YOUR CREDIT') ||
+    upper.includes('SPEND CATEGORIES') ||
+    upper.includes('THE ICONS INDICATE') ||
+    upper.includes('TO VIEW THE TRANSACTION') ||
+    upper.includes('CREDIT CARD ESTATEMENT') ||
+    upper.includes('PERSONAL & HOUSEHOLD') ||
+    upper.includes('RETAIL AND GROCERY') ||
+    upper.includes('HOTELS, ENTERTAINMENT') ||
+    upper.includes('HOME & OFFICE') ||
+    upper.includes('CASH ADVANCES') ||
+    upper.includes('FOREIGN CURRENCY TRANSACTIONS') ||
+    upper.includes('OTHER TRANSACTIONS') ||
+    upper.includes('PROFESSIONAL AND FINANCIAL') ||
+    upper.includes('TRANSPORTATION') ||
+    upper.includes('RESTAURANTS') ||
+    upper.includes('HEALTH & EDUCATION') ||
+    upper.includes('PENDING:') ||
+    upper.includes('COSTCO WORLD') ||
+    upper.includes('YOUR CASH BACK') ||
+    upper.includes('CALENDAR YEAR') ||
+    upper.includes('FEEDBACK') ||
+    upper.includes('SEARCH') ||
+    upper.includes('FROM:') ||
+    upper.includes('MONTH:') ||
+    upper.includes('YEAR:') ||
+    upper.includes('GOODS OR SERVICES') ||
+    upper.includes('TERMS AND CONDITIONS') ||
+    combined.match(/^\d+\/\d+\/\d+/)
+  )
+}
+
+/**
+ * Check if a string is a card number fragment like "5223********9150".
+ */
+function isCardNumberFragment(str) {
+  return /^\d{4}\*{4,}\d{4}$/.test(str.trim())
+}
+
+/**
+ * Classify a credit card row into date, description, and amount.
+ */
+function classifyCCRow(items) {
+  let dateText = ''
+  let descText = ''
+  let amountText = ''
+
+  for (const item of items) {
+    const s = item.str.trim()
+    if (!s) continue
+
+    if (item.x < CC_DATE_MAX) {
+      dateText += (dateText ? ' ' : '') + s
+    } else if (item.x >= CC_AMOUNT_MIN) {
+      amountText += (amountText ? ' ' : '') + s
+    } else {
+      descText += (descText ? ' ' : '') + s
+    }
+  }
+
+  return { dateText, descText, amountText }
+}
+
+/**
+ * Parse credit card transactions from positioned rows.
+ */
+function parseCreditCardTransactions(rows) {
+  const transactions = []
+  let inTransactionArea = false
+
+  // Group rows into transaction blocks
+  // A new transaction starts when we see a date (month name) in the date column
+  // and a description (not a card number) in the desc column
+  const classifiedRows = []
+
+  for (const row of rows) {
+    if (isCCNoiseRow(row)) continue
+    if (isCCHeaderRow(row)) {
+      inTransactionArea = true
+      continue
+    }
+    if (!inTransactionArea) continue
+
+    const cl = classifyCCRow(row.items)
+
+    // Skip empty rows
+    if (!cl.dateText && !cl.descText && !cl.amountText) continue
+
+    // Skip "Credit" label rows (standalone "Credit" in amount column)
+    if (!cl.dateText && !cl.descText && cl.amountText.toLowerCase() === 'credit') {
+      continue
+    }
+
+    // Skip card number fragment rows (with or without "Credit" label)
+    if (!cl.dateText && cl.descText && isCardNumberFragment(cl.descText)) {
+      continue
+    }
+
+    classifiedRows.push(cl)
+  }
+
+  // Now group classified rows into transaction blocks
+  // A block starts when dateText has a month name
+  const blocks = []
+  let currentBlock = []
+
+  for (const cl of classifiedRows) {
+    if (cl.dateText && startsWithMonth(cl.dateText)) {
+      if (currentBlock.length > 0) blocks.push(currentBlock)
+      currentBlock = [cl]
+    } else {
+      currentBlock.push(cl)
+    }
+  }
+  if (currentBlock.length > 0) blocks.push(currentBlock)
+
+  // Parse each block
+  for (const block of blocks) {
+    const tx = parseCCBlock(block)
+    if (tx) transactions.push(tx)
+  }
+
+  return transactions
+}
+
+/**
+ * Parse a single credit card transaction block.
+ */
+function parseCCBlock(blockRows) {
+  const dateFragments = []
+  const descFragments = []
+  let amountStr = ''
+
+  for (const cl of blockRows) {
+    if (cl.dateText.trim()) {
+      dateFragments.push(cl.dateText.trim())
+    }
+    if (cl.descText.trim()) {
+      const desc = cl.descText.trim()
+      // Skip card number fragments that weren't caught earlier
+      if (isCardNumberFragment(desc)) continue
+      // Skip foreign currency conversion lines (e.g. "USD @ 1.424553")
+      if (/^[A-Z]{3}\s+@\s+\d+\.\d+/.test(desc)) continue
+      descFragments.push(desc)
+    }
+    // Take first non-empty amount
+    if (!amountStr && cl.amountText.trim()) {
+      const amt = cl.amountText.trim()
+      // Skip "Credit" label
+      if (amt.toLowerCase() !== 'credit') {
+        amountStr = amt
+      }
+    }
+  }
+
+  // Reconstruct date
+  const dateStr = dateFragments.join(' ')
+  const date = parseCIBCDate(dateStr)
+  if (!date) return null
+
+  // Parse amount — handle negative (credit/payment) amounts
+  if (!amountStr) return null
+
+  // The amount string may contain the merchant description if they're on the
+  // same line and the description was very long. Handle amounts that are
+  // embedded in the description: "OPENAI *CHATGPT SUBSCR SAN FRANCISCO, CA 22.40"
+  // In this case the amount won't have $ prefix — it's in the description.
+  // But typically the amount column has "$" prefix.
+
+  const isNegative = amountStr.includes('−') || amountStr.includes('-')
+  const cleanedAmt = amountStr.replace(/[−\-$,\s]/g, '')
+  const amount = parseFloat(cleanedAmt)
+  if (isNaN(amount) || amount === 0) return null
+
+  const rawDesc = descFragments.join(' ').trim()
+  if (!rawDesc) return null
+
+  // Clean the description — strip embedded amount from long descriptions
+  // e.g. "OPENAI *CHATGPT SUBSCR SAN FRANCISCO, CA 22.40" → strip trailing amount
+  let cleanDesc = rawDesc
+    .replace(/\s+\d+\.\d{2}\s*$/, '') // strip trailing bare amount
+    .trim()
+
+  // Determine if description contains payment-like keywords
+  const descUpper = rawDesc.toUpperCase()
+  const isPayment = descUpper.includes('PAYMENT THANK YOU') ||
+    descUpper.includes('PAIEMENT MERCI')
+
+  // type: negative amounts or payments → income (credit to card)
+  // positive amounts → expense (purchase)
+  const type = isNegative || isPayment ? 'income' : 'expense'
+
+  return {
+    date,
+    amount,
+    type,
+    description: cleanCCDescription(cleanDesc),
+    rawDescription: rawDesc,
+    paymentMethod: 'credit',
+    category: null,
+  }
+}
+
+/**
+ * Clean up a credit card transaction description.
+ */
+function cleanCCDescription(raw) {
+  if (!raw) return ''
+  let d = raw
+
+  // Strip payment phrases
+  if (/PAYMENT THANK YOU/i.test(d)) return 'Credit Card Payment'
+  if (/PAIEMENT MERCI/i.test(d)) return 'Credit Card Payment'
+
+  // Strip trailing location (CITY, PROVINCE) — keep merchant name
+  // e.g. "WAL-MART # 3119 WINNIPEG, MB" → "WAL-MART # 3119"
+  // But be careful — some merchants include city in their name
+  // Only strip if there's enough content before the location
+  const locMatch = d.match(/^(.{10,}?)\s+[A-Z][A-Za-z\s]+,\s*[A-Z]{2,3}\s*$/)
+  if (locMatch) {
+    d = locMatch[1].trim()
+  }
+
+  // Strip "PURCHASE INTEREST" → keep as-is, it's a fee
+  // Strip store numbers for cleaner display
+  d = d.replace(/\s*#\s*\d+\s*/g, ' ').trim()
+
+  // Clean up extra whitespace
+  d = d.replace(/\s{2,}/g, ' ').trim()
+
+  return d || raw
+}
+
 /**
  * Main parser: takes a PDF File and returns parsed transactions.
+ * Auto-detects whether it's a chequing/deposit statement or credit card statement.
  *
  * @param {File} file
  * @returns {Promise<{ transactions: ParsedTransaction[], dateRange: string, accountInfo: string }>}
@@ -489,6 +830,41 @@ function parseBlock(blockRows) {
 export async function parseCIBCStatement(file) {
   const { rows, rawFirstPage, allItems } = await extractPositionedRows(file)
 
+  // --- Auto-detect statement type ---
+  if (isCreditCardStatement(rawFirstPage)) {
+    return parseCIBCCreditCard(rows, rawFirstPage)
+  }
+
+  return parseCIBCDeposit(rows, rawFirstPage, allItems)
+}
+
+/**
+ * Parse a CIBC Credit Card statement (Visa or Mastercard).
+ */
+function parseCIBCCreditCard(rows, rawFirstPage) {
+  const accountInfo = extractCCAccountInfo(rawFirstPage)
+
+  // Extract date range
+  let dateRange = ''
+  const allText = rows.map((r) => r.items.map((i) => i.str).join(' ')).join(' ')
+  const rangeMatch = allText.match(
+    /(?:February|January|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}\s+to\s+(?:February|January|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s*\d{4}/
+  )
+  if (rangeMatch) dateRange = rangeMatch[0]
+
+  const transactions = parseCreditCardTransactions(rows)
+
+  return {
+    transactions,
+    dateRange,
+    accountInfo,
+  }
+}
+
+/**
+ * Parse a CIBC Deposit/Chequing account statement.
+ */
+function parseCIBCDeposit(rows, rawFirstPage, allItems) {
   // --- Pass 0: Auto-detect column thresholds from header keywords ---
   const thresholds = detectColumnThresholds(allItems)
 
@@ -522,9 +898,6 @@ export async function parseCIBCStatement(file) {
   }
 
   // --- Pass 2: Split classified rows into transaction blocks ---
-  // A new block starts when we see a date column entry that starts with a
-  // month name (e.g., "Mar 16," or "Mar 6, 2026"). A standalone year "2026"
-  // does NOT start a new block — it belongs to the current block.
   const blocks = []
   let currentBlock = []
 
@@ -532,7 +905,6 @@ export async function parseCIBCStatement(file) {
     const dateCol = cl.dateText.trim()
 
     if (dateCol && startsWithMonth(dateCol)) {
-      // Start a new block
       if (currentBlock.length > 0) {
         blocks.push(currentBlock)
       }
@@ -570,7 +942,9 @@ export async function isCIBCStatement(file) {
       rawFirstPage.includes('CIBC') &&
       (rawFirstPage.includes('Deposit Account Details') ||
         rawFirstPage.includes('Chequing') ||
-        rawFirstPage.includes('PAST TRANSACTIONS'))
+        rawFirstPage.includes('PAST TRANSACTIONS') ||
+        rawFirstPage.includes('CREDIT CARD DETAILS') ||
+        /CIBC\s*(VISA|Visa|MasterCard|Mastercard)/i.test(rawFirstPage))
     )
   } catch {
     return false
