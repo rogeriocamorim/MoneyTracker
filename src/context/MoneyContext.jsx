@@ -236,6 +236,14 @@ function reducer(state, action) {
       }
     }
 
+    case 'UPDATE_CUSTOM_CATEGORY':
+      return {
+        ...state,
+        customCategories: state.customCategories.map((c) =>
+          c.id === action.payload.id ? { ...c, ...action.payload } : c
+        ),
+      }
+
     case 'REMOVE_CUSTOM_CATEGORY':
       return {
         ...state,
@@ -389,6 +397,7 @@ export function MoneyProvider({ children }) {
     // Categories
     addCustomCategory: (cat) => dispatch({ type: 'ADD_CUSTOM_CATEGORY', payload: cat }),
     addCustomCategories: (cats) => dispatch({ type: 'ADD_CUSTOM_CATEGORIES', payload: cats }),
+    updateCustomCategory: (cat) => dispatch({ type: 'UPDATE_CUSTOM_CATEGORY', payload: cat }),
     removeCustomCategory: (id) => dispatch({ type: 'REMOVE_CUSTOM_CATEGORY', payload: id }),
     // Settings
     updateSettings: (settings) => dispatch({ type: 'UPDATE_SETTINGS', payload: settings }),

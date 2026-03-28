@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Save, Download, Upload, Trash2, Cloud, Plus, X } from 'lucide-react'
+import { Save, Download, Upload, Trash2, Cloud, Plus, X, Pencil, Check } from 'lucide-react'
 import { useMoney } from '@/context/MoneyContext'
 import { exportToJson, importFromJson } from '@/utils/storage'
 import {
@@ -75,6 +75,8 @@ function CurrencySettings({ settings, dispatch }) {
 function CategoryManager({ customCategories, dispatch }) {
   const [showModal, setShowModal] = useState(false)
   const [newCat, setNewCat] = useState({ name: '', type: 'expense' })
+  const [editingId, setEditingId] = useState(null)
+  const [editName, setEditName] = useState('')
 
   const handleAdd = () => {
     if (!newCat.name.trim()) return
@@ -92,16 +94,108 @@ function CategoryManager({ customCategories, dispatch }) {
     toast.success('Category removed')
   }
 
+  const startEdit = (cat) => {
+    setEditingId(cat.id)
+    setEditName(cat.name)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditName('')
+  }
+
+  const saveEdit = (cat) => {
+    const trimmed = editName.trim()
+    if (!trimmed || trimmed === cat.name) {
+      cancelEdit()
+      return
+    }
+    dispatch({
+      type: 'UPDATE_CUSTOM_CATEGORY',
+      payload: { id: cat.id, name: trimmed },
+    })
+    setEditingId(null)
+    setEditName('')
+    toast.success('Category renamed')
+  }
+
+  // Build unified lists: predefined + custom, grouped by type
+  const allExpense = [
+    ...expenseCategories.map((c) => ({ ...c, builtin: true, type: 'expense' })),
+    ...customCategories.filter((c) => c.type === 'expense').map((c) => ({ ...c, builtin: false })),
+  ]
+  const allIncome = [
+    ...incomeSources.map((s) => ({ ...s, builtin: true, type: 'income' })),
+    ...customCategories.filter((c) => c.type === 'income').map((c) => ({ ...c, builtin: false })),
+  ]
+  const totalCount = allExpense.length + allIncome.length
+
+  const renderCategoryRow = (cat) => (
+    <div key={cat.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-slate-50 transition-colors group">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {cat.color && (
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+        )}
+        {editingId === cat.id ? (
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveEdit(cat)
+              if (e.key === 'Escape') cancelEdit()
+            }}
+            autoFocus
+            className="text-sm text-slate-700 bg-white border border-primary-300 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-primary-400 w-full max-w-[180px]"
+          />
+        ) : (
+          <span className="text-sm text-slate-700 truncate">{cat.name}</span>
+        )}
+        {cat.builtin && (
+          <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">built-in</span>
+        )}
+      </div>
+      {!cat.builtin && (
+        <div className="flex items-center gap-0.5 shrink-0">
+          {editingId === cat.id ? (
+            <>
+              <button onClick={() => saveEdit(cat)} className="text-primary-500 hover:text-primary-700 cursor-pointer p-1" title="Save">
+                <Check className="w-4 h-4" />
+              </button>
+              <button onClick={cancelEdit} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1" title="Cancel">
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => startEdit(cat)}
+                className="text-slate-300 hover:text-primary-500 cursor-pointer p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Rename"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => handleRemove(cat.id)} className="text-slate-300 hover:text-danger-500 cursor-pointer p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <>
       <Card>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Custom Categories</h3>
+            <h3 className="text-sm font-semibold text-slate-900">Categories</h3>
             <p className="text-sm text-slate-400 mt-0.5">
-              {customCategories.length === 0
-                ? 'No custom categories yet'
-                : `${customCategories.length} custom categor${customCategories.length === 1 ? 'y' : 'ies'}`}
+              {totalCount} categor{totalCount === 1 ? 'y' : 'ies'} ({allExpense.length} expense, {allIncome.length} income)
+              {customCategories.length > 0 && (
+                <span className="text-primary-500"> &middot; {customCategories.length} custom</span>
+              )}
             </p>
           </div>
           <Button variant="outline" size="sm" icon={Plus} onClick={() => setShowModal(true)}>
@@ -110,7 +204,7 @@ function CategoryManager({ customCategories, dispatch }) {
         </div>
       </Card>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Custom Categories" size="md">
+      <Modal open={showModal} onClose={() => { setShowModal(false); cancelEdit() }} title="Categories" size="md">
         <div className="space-y-4">
           {/* Add form */}
           <div className="p-3 rounded-lg bg-slate-50 space-y-3">
@@ -136,24 +230,25 @@ function CategoryManager({ customCategories, dispatch }) {
             </div>
           </div>
 
-          {/* List */}
-          {customCategories.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-4">No custom categories yet. Add one above.</p>
-          ) : (
-            <div className="space-y-1 max-h-64 overflow-y-auto">
-              {customCategories.map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-700">{cat.name}</span>
-                    <Badge variant={(cat.type || 'expense') === 'expense' ? 'danger' : 'success'} size="sm">{cat.type || 'expense'}</Badge>
-                  </div>
-                  <button onClick={() => handleRemove(cat.id)} className="text-slate-400 hover:text-danger-500 cursor-pointer p-1">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+          {/* Expense categories */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-1">
+              Expense Categories ({allExpense.length})
+            </p>
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {allExpense.map(renderCategoryRow)}
             </div>
-          )}
+          </div>
+
+          {/* Income sources */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-1">
+              Income Sources ({allIncome.length})
+            </p>
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {allIncome.map(renderCategoryRow)}
+            </div>
+          </div>
         </div>
       </Modal>
     </>
