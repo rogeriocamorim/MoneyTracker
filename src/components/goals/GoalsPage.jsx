@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Plus, Target, TrendingUp } from 'lucide-react'
+import { parseISO } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency } from '@/utils/calculations'
 import { Button, Card, Modal, Input, Select, ProgressBar, EmptyState, Badge } from '@/components/ui'
@@ -123,7 +124,7 @@ function GoalCard({ goal, currency, onEdit, onDelete, onContribute }) {
   const remaining = goal.targetAmount - goal.currentAmount
 
   const deadlineStr = goal.deadline
-    ? new Date(goal.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? parseISO(goal.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null
 
   return (

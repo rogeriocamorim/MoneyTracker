@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, Wallet, ChevronDown, ChevronRight } from 'lucide-react'
+import { parseISO, format } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency } from '@/utils/calculations'
 import { incomeSources, getIncomeSourceById, getAllIncomeSources } from '@/data/categories'
@@ -9,7 +10,7 @@ import IncomeTable from './IncomeTable'
 function groupByMonth(items) {
   const groups = {}
   for (const item of items) {
-    const d = new Date(item.date)
+    const d = parseISO(item.date)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     if (!groups[key]) groups[key] = []
     groups[key].push(item)
@@ -51,7 +52,7 @@ export default function IncomePage() {
         )
       })
     }
-    return result.sort((a, b) => new Date(b.date) - new Date(a.date))
+    return result.sort((a, b) => b.date.localeCompare(a.date))
   }, [income, search, customCategories])
 
   const totalFiltered = filtered.reduce((s, item) => s + item.amount, 0)
@@ -174,7 +175,7 @@ function IncomeForm({ initial, customCategories = [], categoryOverrides = {}, on
   const sourceOptions = allSources.map((s) => ({ value: s.id, label: s.name }))
 
   const [form, setForm] = useState({
-    date: initial?.date || new Date().toISOString().slice(0, 10),
+    date: initial?.date || format(new Date(), 'yyyy-MM-dd'),
     amount: initial?.amount || '',
     source: initial?.source || '',
     description: initial?.description || '',

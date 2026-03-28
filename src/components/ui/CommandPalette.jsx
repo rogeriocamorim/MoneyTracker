@@ -39,12 +39,12 @@ export default function CommandPalette() {
   // Build recent transactions for search
   const recentExpenses = (state.expenses || [])
     .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10)
 
   const recentIncome = (state.income || [])
     .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5)
 
   const sym = state.settings?.currencySymbol || '$'

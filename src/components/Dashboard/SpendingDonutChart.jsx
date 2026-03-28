@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { parseISO } from 'date-fns'
 import Card from '@/components/ui/Card'
 import { useMoney } from '@/context/MoneyContext'
 import { getTotalByCategory, formatCurrency } from '@/utils/calculations'
@@ -21,7 +22,7 @@ export default function SpendingDonutChart() {
   const data = useMemo(() => {
     const byCategory = getTotalByCategory(
       expenses.filter((e) => {
-        const d = new Date(e.date)
+        const d = parseISO(e.date)
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
       })
     )

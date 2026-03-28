@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
+import { parseISO } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency, formatCompactCurrency, getTotalByCategory } from '@/utils/calculations'
 import { getCategoryById } from '@/data/categories'
@@ -23,11 +24,11 @@ export default function ReportsPage() {
       const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' })
 
       const mIncome = income
-        .filter((item) => { const id = new Date(item.date); return id.getMonth() === month && id.getFullYear() === year })
+        .filter((item) => { const id = parseISO(item.date); return id.getMonth() === month && id.getFullYear() === year })
         .reduce((s, item) => s + item.amount, 0)
 
       const mExpenses = expenses
-        .filter((item) => { const id = new Date(item.date); return id.getMonth() === month && id.getFullYear() === year })
+        .filter((item) => { const id = parseISO(item.date); return id.getMonth() === month && id.getFullYear() === year })
         .reduce((s, item) => s + item.amount, 0)
 
       data.push({ name: label, income: mIncome, expenses: mExpenses, net: mIncome - mExpenses })
@@ -38,7 +39,7 @@ export default function ReportsPage() {
   const categoryBreakdown = useMemo(() => {
     const now = new Date()
     const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate())
-    const periodExpenses = expenses.filter((e) => new Date(e.date) >= cutoff)
+    const periodExpenses = expenses.filter((e) => parseISO(e.date) >= cutoff)
     const byCategory = getTotalByCategory(periodExpenses)
 
     return Object.entries(byCategory)

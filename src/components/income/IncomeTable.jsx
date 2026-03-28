@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
+import { parseISO } from 'date-fns'
 import { Pencil, Trash2 } from 'lucide-react'
 import Table from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
@@ -13,7 +14,7 @@ export default function IncomeTable({ data, currency, customCategories = [], cat
     columnHelper.accessor('date', {
       header: 'Date',
       cell: ({ getValue }) => {
-        const d = new Date(getValue())
+        const d = parseISO(getValue())
         return (
           <span className="text-sm text-slate-600 whitespace-nowrap">
             {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

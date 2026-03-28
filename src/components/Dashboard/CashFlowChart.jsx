@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { parseISO } from 'date-fns'
 import Card from '@/components/ui/Card'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency, formatCompactCurrency } from '@/utils/calculations'
@@ -21,14 +22,14 @@ export default function CashFlowChart() {
 
       const monthIncome = income
         .filter((item) => {
-          const id = new Date(item.date)
+          const id = parseISO(item.date)
           return id.getMonth() === month && id.getFullYear() === year
         })
         .reduce((s, item) => s + item.amount, 0)
 
       const monthExpenses = expenses
         .filter((item) => {
-          const id = new Date(item.date)
+          const id = parseISO(item.date)
           return id.getMonth() === month && id.getFullYear() === year
         })
         .reduce((s, item) => s + item.amount, 0)

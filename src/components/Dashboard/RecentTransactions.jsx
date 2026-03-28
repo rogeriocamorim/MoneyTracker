@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { parseISO } from 'date-fns'
 import Card from '@/components/ui/Card'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency } from '@/utils/calculations'
@@ -14,7 +15,7 @@ export default function RecentTransactions() {
 
   const recent = useMemo(() => {
     return [...expenses]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 7)
   }, [expenses])
 
@@ -49,7 +50,7 @@ export default function RecentTransactions() {
                     {tx.description || tx.merchant || cat?.name || 'Transaction'}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {parseISO(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     {tx.paymentMethod && ` · ${tx.paymentMethod}`}
                   </p>
                 </div>

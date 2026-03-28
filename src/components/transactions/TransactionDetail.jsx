@@ -1,4 +1,5 @@
 import { X, Pencil, Trash2, Calendar, Tag, CreditCard, FileText } from 'lucide-react'
+import { parseISO } from 'date-fns'
 import { Button, Badge } from '@/components/ui'
 import { getCategoryById } from '@/data/categories'
 import { formatCurrency } from '@/utils/calculations'
@@ -29,7 +30,7 @@ export default function TransactionDetail({ transaction, currency, customCategor
         </div>
 
         <DetailRow icon={Calendar} label="Date">
-          {new Date(tx.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          {parseISO(tx.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </DetailRow>
 
         {cat && (

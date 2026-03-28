@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Plus, Search, Filter, Download, ChevronDown, ChevronRight, FileUp } from 'lucide-react'
+import { parseISO, format } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency } from '@/utils/calculations'
 import { getCategoryById, expenseCategories, paymentMethods } from '@/data/categories'
@@ -13,7 +14,7 @@ import { Receipt } from 'lucide-react'
 function groupByMonth(items) {
   const groups = {}
   for (const item of items) {
-    const d = new Date(item.date)
+    const d = parseISO(item.date)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     if (!groups[key]) groups[key] = []
     groups[key].push(item)
@@ -66,7 +67,7 @@ export default function TransactionsPage() {
     if (filters.dateFrom) result = result.filter((tx) => tx.date >= filters.dateFrom)
     if (filters.dateTo) result = result.filter((tx) => tx.date <= filters.dateTo)
 
-    return result.sort((a, b) => new Date(b.date) - new Date(a.date))
+    return result.sort((a, b) => b.date.localeCompare(a.date))
   }, [expenses, search, filters, customCategories])
 
   const totalFiltered = filtered.reduce((s, tx) => s + tx.amount, 0)
@@ -272,7 +273,7 @@ function ExpenseForm({ initial, customCategories = [], goals = [], onSave, onCan
   ]
 
   const [form, setForm] = useState({
-    date: initial?.date || new Date().toISOString().slice(0, 10),
+    date: initial?.date || format(new Date(), 'yyyy-MM-dd'),
     amount: initial?.amount || '',
     category: initial?.goalId ? `${GOAL_PREFIX}${initial.goalId}` : initial?.category || '',
     description: initial?.description || '',
