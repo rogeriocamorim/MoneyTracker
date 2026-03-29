@@ -23,7 +23,7 @@ export default function BudgetsPage() {
   const handleSave = (categoryId, amount) => {
     dispatch({
       type: 'SET_BUDGET',
-      payload: { categoryId, budget: { amount: Number(amount), period: 'monthly', rollover: false } },
+      payload: { category: categoryId, amount: Number(amount), period: 'monthly', rollover: false },
     })
     setShowForm(false)
     setEditingBudget(null)
@@ -166,7 +166,7 @@ function BudgetForm({ initial, existingBudgets = {}, customCategories = [], onSa
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!category || !amount) return
+    if (!category || !amount || Number(amount) <= 0) return
     onSave(category, amount)
   }
 
