@@ -2,10 +2,12 @@ import {
   startOfMonth,
   endOfMonth,
   startOfYear,
+  endOfYear,
   isWithinInterval,
   format,
   parseISO,
   subMonths,
+  differenceInCalendarDays,
 } from 'date-fns'
 
 // ─── Currency Formatting ───────────────────────────────
@@ -256,4 +258,74 @@ export const getMonthOverMonthChange = (items, type = 'expenses') => {
     previous: lastTotal,
     change: getPercentChange(currentTotal, lastTotal),
   }
+}
+
+// ─── Annual Bills ──────────────────────────────────────
+
+/**
+ * Check if an annual bill has been paid by matching expenses in the current year.
+ * Matches on: same category + amount within 20% tolerance.
+ * Returns the matching expense (best match by closest amount) or null.
+ */
+export const findMatchingExpense = (bill, expenses, year = new Date().getFullYear()) => {
+  const yearStart = startOfYear(new Date(year, 0, 1))
+  const yearEnd = endOfYear(new Date(year, 0, 1))
+  const tolerance = bill.amount * 0.2 // 20% tolerance
+
+  const candidates = expenses.filter((e) => {
+    if (e.category !== bill.category) return false
+    const d = parseISO(e.date)
+    if (!isWithinInterval(d, { start: yearStart, end: yearEnd })) return false
+    return Math.abs(e.amount - bill.amount) <= tolerance
+  })
+
+  if (candidates.length === 0) return null
+  // Return the closest match by amount
+  return candidates.reduce((best, e) =>
+    Math.abs(e.amount - bill.amount) < Math.abs(best.amount - bill.amount) ? e : best
+  )
+}
+
+/**
+ * Get the status of an annual bill: paid, upcoming, overdue, or due-soon.
+ * Returns { status, daysUntilDue, matchedExpense }.
+ */
+export const getAnnualBillStatus = (bill, expenses, year = new Date().getFullYear()) => {
+  const matchedExpense = findMatchingExpense(bill, expenses, year)
+  if (matchedExpense || bill.paidManually) {
+    return { status: 'paid', daysUntilDue: null, matchedExpense }
+  }
+
+  if (!bill.dueDate) {
+    return { status: 'unknown', daysUntilDue: null, matchedExpense: null }
+  }
+
+  const today = new Date()
+  // Build the due date for the target year from the bill's month/day
+  const dueParsed = parseISO(bill.dueDate)
+  const dueThisYear = new Date(year, dueParsed.getMonth(), dueParsed.getDate())
+  const daysUntil = differenceInCalendarDays(dueThisYear, today)
+
+  if (daysUntil < 0) {
+    return { status: 'overdue', daysUntilDue: daysUntil, matchedExpense: null }
+  }
+  if (daysUntil <= 30) {
+    return { status: 'due-soon', daysUntilDue: daysUntil, matchedExpense: null }
+  }
+  return { status: 'upcoming', daysUntilDue: daysUntil, matchedExpense: null }
+}
+
+/**
+ * Get status for all annual bills, sorted: overdue first, then due-soon, upcoming, paid last.
+ */
+export const getAllAnnualBillStatuses = (annualBills, expenses, year = new Date().getFullYear()) => {
+  const order = { overdue: 0, 'due-soon': 1, upcoming: 2, unknown: 3, paid: 4 }
+  return annualBills
+    .map((bill) => ({ bill, ...getAnnualBillStatus(bill, expenses, year) }))
+    .sort((a, b) => {
+      const diff = (order[a.status] ?? 3) - (order[b.status] ?? 3)
+      if (diff !== 0) return diff
+      // Within same status, sort by due date ascending
+      return (a.daysUntilDue ?? 999) - (b.daysUntilDue ?? 999)
+    })
 }

@@ -19,6 +19,7 @@ const initialState = {
   expenses: [],
   income: [],
   budgets: {},
+  annualBills: [],
   goals: [],
   accounts: [],
   customCategories: [],
@@ -45,6 +46,7 @@ function reducer(state, action) {
         ...action.payload,
         customCategories: action.payload.customCategories || [],
         categoryOverrides: action.payload.categoryOverrides || {},
+        annualBills: action.payload.annualBills || [],
         goals: action.payload.goals || [],
         accounts: action.payload.accounts || [],
         isLoaded: true,
@@ -174,6 +176,30 @@ function reducer(state, action) {
     case 'SET_BUDGETS':
       return { ...state, budgets: action.payload }
 
+    // ─── Annual Bills ────────────────────────────
+    case 'ADD_ANNUAL_BILL':
+      return {
+        ...state,
+        annualBills: [
+          ...state.annualBills,
+          { ...action.payload, id: uuidv4(), createdAt: now },
+        ],
+      }
+
+    case 'UPDATE_ANNUAL_BILL':
+      return {
+        ...state,
+        annualBills: state.annualBills.map((b) =>
+          b.id === action.payload.id ? { ...b, ...action.payload, updatedAt: now } : b
+        ),
+      }
+
+    case 'DELETE_ANNUAL_BILL':
+      return {
+        ...state,
+        annualBills: state.annualBills.filter((b) => b.id !== action.payload),
+      }
+
     // ─── Goals ───────────────────────────────────
     case 'ADD_GOAL':
       return {
@@ -293,6 +319,7 @@ function reducer(state, action) {
         expenses: action.payload.expenses || [],
         income: action.payload.income || [],
         budgets: action.payload.budgets || {},
+        annualBills: action.payload.annualBills || [],
         goals: action.payload.goals || [],
         accounts: action.payload.accounts || [],
         customCategories: action.payload.customCategories || [],
@@ -415,6 +442,10 @@ export function MoneyProvider({ children }) {
       dispatch({ type: 'SET_BUDGET', payload: { monthKey, category, amount, period, rollover } }),
     removeBudget: (monthKey, category) =>
       dispatch({ type: 'REMOVE_BUDGET', payload: { monthKey, category } }),
+    // Annual Bills
+    addAnnualBill: (bill) => dispatch({ type: 'ADD_ANNUAL_BILL', payload: bill }),
+    updateAnnualBill: (bill) => dispatch({ type: 'UPDATE_ANNUAL_BILL', payload: bill }),
+    deleteAnnualBill: (id) => dispatch({ type: 'DELETE_ANNUAL_BILL', payload: id }),
     // Goals
     addGoal: (goal) => dispatch({ type: 'ADD_GOAL', payload: goal }),
     updateGoal: (goal) => dispatch({ type: 'UPDATE_GOAL', payload: goal }),

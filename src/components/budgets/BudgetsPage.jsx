@@ -1,19 +1,24 @@
 import { useState, useMemo } from 'react'
-import { PieChart, Plus, ChevronLeft, ChevronRight, Copy, ChevronDown } from 'lucide-react'
+import { PieChart, Plus, ChevronLeft, ChevronRight, Copy, ChevronDown, CalendarClock, Trash2, Pencil, Check, AlertTriangle, Clock } from 'lucide-react'
 import { format, subMonths, addMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
-import { getBudgetProgress, getBudgetsForMonth, formatCurrency } from '@/utils/calculations'
+import { getBudgetProgress, getBudgetsForMonth, formatCurrency, getAllAnnualBillStatuses } from '@/utils/calculations'
 import { getCategoryById, expenseCategories } from '@/data/categories'
 import { Button, Modal, EmptyState, Select, Input, ProgressBar, Card } from '@/components/ui'
 
 export default function BudgetsPage() {
   const { state, dispatch } = useMoney()
-  const { expenses, budgets, settings, customCategories, categoryOverrides = {} } = state
+  const { expenses, budgets, annualBills = [], settings, customCategories, categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
   const [showForm, setShowForm] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [expandedCategory, setExpandedCategory] = useState(null)
+
+  // Annual bills state
+  const [showBillForm, setShowBillForm] = useState(false)
+  const [editingBill, setEditingBill] = useState(null)
+  const [deletingBill, setDeletingBill] = useState(null)
 
   const monthKey = format(selectedDate, 'yyyy-MM')
   const monthLabel = format(selectedDate, 'MMMM yyyy')
@@ -35,6 +40,15 @@ export default function BudgetsPage() {
     const end = endOfMonth(monthDate)
     return expenses.filter((e) => isWithinInterval(parseISO(e.date), { start, end }))
   }, [expenses, monthKey])
+
+  // Annual bills with auto-match status
+  const currentYear = new Date().getFullYear()
+  const billStatuses = useMemo(
+    () => getAllAnnualBillStatuses(annualBills, expenses, currentYear),
+    [annualBills, expenses, currentYear]
+  )
+  const totalAnnualBills = annualBills.reduce((s, b) => s + b.amount, 0)
+  const paidBillsTotal = billStatuses.filter((b) => b.status === 'paid').reduce((s, b) => s + b.bill.amount, 0)
 
   const totalBudget = budgetProgress.reduce((s, b) => s + b.budget, 0)
   const totalSpent = budgetProgress.reduce((s, b) => s + b.spent, 0)
@@ -71,6 +85,31 @@ export default function BudgetsPage() {
 
   const toggleExpand = (categoryId) => {
     setExpandedCategory((prev) => (prev === categoryId ? null : categoryId))
+  }
+
+  // Annual bill handlers
+  const handleSaveBill = (bill) => {
+    if (editingBill) {
+      dispatch({ type: 'UPDATE_ANNUAL_BILL', payload: { ...bill, id: editingBill.id } })
+    } else {
+      dispatch({ type: 'ADD_ANNUAL_BILL', payload: bill })
+    }
+    setShowBillForm(false)
+    setEditingBill(null)
+  }
+
+  const handleDeleteBill = () => {
+    if (deletingBill) {
+      dispatch({ type: 'DELETE_ANNUAL_BILL', payload: deletingBill.id })
+      setDeletingBill(null)
+    }
+  }
+
+  const handleTogglePaid = (bill) => {
+    dispatch({
+      type: 'UPDATE_ANNUAL_BILL',
+      payload: { id: bill.id, paidManually: !bill.paidManually },
+    })
   }
 
   // For the form: categories that already have a budget this month
@@ -174,6 +213,62 @@ export default function BudgetsPage() {
         </div>
       )}
 
+      {/* ─── Annual Bills Section ─────────────────── */}
+      <div className="border-t border-slate-200 pt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <CalendarClock className="w-4 h-4 text-slate-500" />
+              Annual Bills ({currentYear})
+            </h2>
+            {annualBills.length > 0 && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                {billStatuses.filter((b) => b.status === 'paid').length} of {annualBills.length} paid &middot;{' '}
+                <span className="font-number font-medium text-slate-700">
+                  {formatCurrency(paidBillsTotal, currency)}
+                </span>
+                {' of '}
+                <span className="font-number font-medium text-slate-700">
+                  {formatCurrency(totalAnnualBills, currency)}
+                </span>
+              </p>
+            )}
+          </div>
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditingBill(null); setShowBillForm(true) }}>
+            Add Bill
+          </Button>
+        </div>
+
+        {annualBills.length === 0 ? (
+          <EmptyState
+            icon={CalendarClock}
+            title="No annual bills"
+            description="Track yearly recurring expenses like property tax, insurance, and subscriptions"
+            action={() => { setEditingBill(null); setShowBillForm(true) }}
+            actionLabel="Add Annual Bill"
+          />
+        ) : (
+          <div className="space-y-2">
+            {billStatuses.map(({ bill, status, daysUntilDue, matchedExpense }) => (
+              <AnnualBillRow
+                key={bill.id}
+                bill={bill}
+                status={status}
+                daysUntilDue={daysUntilDue}
+                matchedExpense={matchedExpense}
+                currency={currency}
+                customCategories={customCategories}
+                categoryOverrides={categoryOverrides}
+                onEdit={() => { setEditingBill(bill); setShowBillForm(true) }}
+                onDelete={() => setDeletingBill(bill)}
+                onTogglePaid={() => handleTogglePaid(bill)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Budget form modal */}
       <Modal
         open={showForm}
         onClose={() => { setShowForm(false); setEditingBudget(null) }}
@@ -187,6 +282,40 @@ export default function BudgetsPage() {
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingBudget(null) }}
         />
+      </Modal>
+
+      {/* Annual bill form modal */}
+      <Modal
+        open={showBillForm}
+        onClose={() => { setShowBillForm(false); setEditingBill(null) }}
+        title={editingBill ? 'Edit Annual Bill' : 'Add Annual Bill'}
+        size="sm"
+      >
+        <AnnualBillForm
+          initial={editingBill}
+          customCategories={customCategories}
+          categoryOverrides={categoryOverrides}
+          onSave={handleSaveBill}
+          onCancel={() => { setShowBillForm(false); setEditingBill(null) }}
+        />
+      </Modal>
+
+      {/* Delete bill confirmation modal */}
+      <Modal
+        open={!!deletingBill}
+        onClose={() => setDeletingBill(null)}
+        title="Delete Annual Bill"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete <span className="font-semibold">{deletingBill?.name}</span>?
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setDeletingBill(null)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteBill}>Delete</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )
@@ -308,6 +437,151 @@ function BudgetForm({ initial, existingBudgets = {}, customCategories = [], onSa
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
         <Button variant="primary" type="submit">{initial ? 'Update' : 'Add Budget'}</Button>
+      </div>
+    </form>
+  )
+}
+
+// ─── Annual Bill Components ──────────────────────────────
+
+const statusConfig = {
+  paid: { label: 'Paid', color: 'bg-success-100 text-success-700', icon: Check },
+  overdue: { label: 'Overdue', color: 'bg-danger-100 text-danger-700', icon: AlertTriangle },
+  'due-soon': { label: 'Due Soon', color: 'bg-warning-100 text-warning-700', icon: Clock },
+  upcoming: { label: 'Upcoming', color: 'bg-slate-100 text-slate-600', icon: CalendarClock },
+  unknown: { label: 'No date', color: 'bg-slate-100 text-slate-500', icon: CalendarClock },
+}
+
+function AnnualBillRow({ bill, status, daysUntilDue, matchedExpense, currency, customCategories, categoryOverrides, onEdit, onDelete, onTogglePaid }) {
+  const cat = getCategoryById(bill.category, customCategories, categoryOverrides)
+  const cfg = statusConfig[status] || statusConfig.unknown
+  const StatusIcon = cfg.icon
+
+  const dueLabel = (() => {
+    if (status === 'paid') {
+      if (matchedExpense) return `Matched: ${formatCurrency(matchedExpense.amount, currency)} on ${format(parseISO(matchedExpense.date), 'MMM d')}`
+      return 'Manually marked paid'
+    }
+    if (daysUntilDue === null) return ''
+    if (daysUntilDue === 0) return 'Due today'
+    if (daysUntilDue === 1) return 'Due tomorrow'
+    if (daysUntilDue < 0) return `${Math.abs(daysUntilDue)} days overdue`
+    if (daysUntilDue <= 30) return `Due in ${daysUntilDue} days`
+    const months = Math.round(daysUntilDue / 30)
+    return `Due in ~${months} month${months !== 1 ? 's' : ''}`
+  })()
+
+  return (
+    <Card className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+      {/* Left: category dot + name + amount */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat?.color || '#94a3b8' }} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900 truncate">{bill.name}</span>
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${cfg.color}`}>
+              <StatusIcon className="w-3 h-3" />
+              {cfg.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="font-number font-medium text-slate-700">{formatCurrency(bill.amount, currency)}</span>
+            <span>&middot;</span>
+            <span>{cat?.name || bill.category}</span>
+            {bill.dueDate && (
+              <>
+                <span>&middot;</span>
+                <span>{format(parseISO(bill.dueDate), 'MMM d')}</span>
+              </>
+            )}
+          </div>
+          {dueLabel && (
+            <p className="text-[11px] text-slate-400 mt-0.5">{dueLabel}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Right: actions */}
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={onTogglePaid}
+          className={`text-xs px-2 py-1 rounded-md cursor-pointer ${
+            status === 'paid'
+              ? 'bg-success-50 text-success-600 hover:bg-success-100'
+              : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+          }`}
+          title={status === 'paid' ? 'Mark as unpaid' : 'Mark as paid'}
+        >
+          {status === 'paid' ? 'Undo' : 'Mark Paid'}
+        </button>
+        <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-primary-500 cursor-pointer" title="Edit">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-danger-500 cursor-pointer" title="Delete">
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </Card>
+  )
+}
+
+function AnnualBillForm({ initial, customCategories = [], categoryOverrides = {}, onSave, onCancel }) {
+  const allCategories = [...expenseCategories, ...customCategories.filter((c) => c.type === 'expense')]
+
+  const [name, setName] = useState(initial?.name || '')
+  const [amount, setAmount] = useState(initial?.amount || '')
+  const [category, setCategory] = useState(initial?.category || '')
+  const [dueDate, setDueDate] = useState(initial?.dueDate || '')
+  const [notes, setNotes] = useState(initial?.notes || '')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!name || !amount || Number(amount) <= 0 || !category) return
+    onSave({ name, amount: Number(amount), category, dueDate: dueDate || null, notes })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Input
+        label="Bill Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        placeholder="e.g. Property Tax"
+      />
+      <Input
+        label="Expected Amount"
+        type="number"
+        step="0.01"
+        min="0"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        required
+        placeholder="0.00"
+      />
+      <Select
+        label="Category (for auto-match)"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        required
+        options={allCategories.map((c) => ({ value: c.id, label: c.name }))}
+        placeholder="Select category..."
+      />
+      <Input
+        label="Expected Due Date"
+        type="date"
+        value={dueDate}
+        onChange={(e) => setDueDate(e.target.value)}
+      />
+      <Input
+        label="Notes (optional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Any additional notes..."
+      />
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+        <Button variant="primary" type="submit">{initial ? 'Update' : 'Add Bill'}</Button>
       </div>
     </form>
   )
