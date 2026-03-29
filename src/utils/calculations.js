@@ -117,7 +117,11 @@ export const getTotalByPaymentMethod = (expenses) => {
 }
 
 export const getBudgetProgress = (expenses, budgets) => {
-  const totals = getTotalByCategory(expenses)
+  const now = new Date()
+  const monthExpenses = expenses.filter((e) =>
+    isWithinInterval(parseISO(e.date), { start: startOfMonth(now), end: endOfMonth(now) })
+  )
+  const totals = getTotalByCategory(monthExpenses)
 
   return Object.entries(budgets).map(([category, config]) => {
     const budget = typeof config === 'number' ? config : config.amount || 0
