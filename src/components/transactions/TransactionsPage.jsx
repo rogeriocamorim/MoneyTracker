@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Plus, Search, Filter, Download, ChevronDown, ChevronRight, FileUp } from 'lucide-react'
+import { Plus, Search, Filter, Download, ChevronDown, ChevronRight, FileUp, AlertTriangle } from 'lucide-react'
 import { parseISO, format } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
 import { formatCurrency } from '@/utils/calculations'
@@ -45,6 +45,7 @@ export default function TransactionsPage() {
   const [filters, setFilters] = useState({ category: '', paymentMethod: '', account: '', dateFrom: '', dateTo: '' })
   const [collapsedMonths, setCollapsedMonths] = useState({})
   const [showImport, setShowImport] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   const filtered = useMemo(() => {
     let result = [...expenses]
@@ -96,8 +97,15 @@ export default function TransactionsPage() {
   }
 
   const handleDelete = (id) => {
-    dispatch({ type: 'DELETE_EXPENSE', payload: id })
-    setSelectedTx(null)
+    setDeletingId(id)
+  }
+
+  const confirmDelete = () => {
+    if (deletingId) {
+      dispatch({ type: 'DELETE_EXPENSE', payload: deletingId })
+      setSelectedTx(null)
+    }
+    setDeletingId(null)
   }
 
   const handleSave = (data) => {
@@ -257,6 +265,31 @@ export default function TransactionsPage() {
 
       {/* Import statement modal */}
       <StatementImport open={showImport} onClose={() => setShowImport(false)} />
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={!!deletingId}
+        onClose={() => setDeletingId(null)}
+        title="Delete Transaction"
+        size="sm"
+      >
+        <div className="flex flex-col items-center text-center gap-4 py-2">
+          <div className="w-12 h-12 rounded-full bg-danger-50 flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-danger-500" />
+          </div>
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this transaction? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 w-full">
+            <Button variant="outline" size="sm" onClick={() => setDeletingId(null)} className="flex-1">
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={confirmDelete} className="flex-1">
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
