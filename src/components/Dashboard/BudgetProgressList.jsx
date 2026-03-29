@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { format } from 'date-fns'
 import Card from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui'
 import { useMoney } from '@/context/MoneyContext'
@@ -10,11 +11,13 @@ export default function BudgetProgressList() {
   const { expenses, budgets, settings, customCategories = [], categoryOverrides = {} } = state
   const currency = settings?.currencySymbol || '$'
 
+  const currentMonth = format(new Date(), 'yyyy-MM')
+
   const budgetData = useMemo(() => {
-    return getBudgetProgress(expenses, budgets)
+    return getBudgetProgress(expenses, budgets, currentMonth)
       .sort((a, b) => b.percentage - a.percentage)
       .slice(0, 5)
-  }, [expenses, budgets])
+  }, [expenses, budgets, currentMonth])
 
   return (
     <Card>

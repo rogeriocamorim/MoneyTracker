@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Save, Download, Upload, Trash2, Cloud, Plus, X, Pencil, Check } from 'lucide-react'
 import { useMoney } from '@/context/MoneyContext'
 import { exportToJson, importFromJson } from '@/utils/storage'
+import { migrateData } from '@/utils/migration'
 import {
   initGoogleApi,
   signIn,
@@ -273,7 +274,7 @@ function DataManagement({ state, dispatch }) {
     if (!file) return
     try {
       const text = await file.text()
-      const data = JSON.parse(text)
+      const data = migrateData(JSON.parse(text))
       dispatch({ type: 'IMPORT_DATA', payload: data })
       toast.success('Data imported successfully')
     } catch (err) {
@@ -352,7 +353,7 @@ function GoogleDriveSection({ settings, state, dispatch }) {
         toast.error('No backup found on Google Drive')
         return
       }
-      dispatch({ type: 'IMPORT_DATA', payload: result.data })
+      dispatch({ type: 'IMPORT_DATA', payload: migrateData(result.data) })
       toast.success(`Restored from backup (${new Date(result.modifiedTime).toLocaleDateString()})`)
     } catch (err) {
       toast.error(err?.message || 'Restore failed')

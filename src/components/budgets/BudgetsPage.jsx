@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
-import { PieChart, Plus } from 'lucide-react'
+import { PieChart, Plus, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import { format, subMonths, addMonths } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
-import { getBudgetProgress, formatCurrency } from '@/utils/calculations'
+import { getBudgetProgress, getBudgetsForMonth, formatCurrency } from '@/utils/calculations'
 import { getCategoryById, expenseCategories } from '@/data/categories'
 import { Button, Modal, EmptyState, Select, Input, ProgressBar, Card } from '@/components/ui'
 
@@ -11,10 +12,18 @@ export default function BudgetsPage() {
   const currency = settings?.currencySymbol || '$'
   const [showForm, setShowForm] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
+  const [selectedDate, setSelectedDate] = useState(new Date())
+
+  const monthKey = format(selectedDate, 'yyyy-MM')
+  const monthLabel = format(selectedDate, 'MMMM yyyy')
+  const isCurrentMonth = monthKey === format(new Date(), 'yyyy-MM')
+
+  const monthBudgets = useMemo(() => getBudgetsForMonth(budgets, monthKey), [budgets, monthKey])
+  const hasExplicitBudgets = !!budgets[monthKey]
 
   const budgetProgress = useMemo(
-    () => getBudgetProgress(expenses, budgets).sort((a, b) => b.percentage - a.percentage),
-    [expenses, budgets]
+    () => getBudgetProgress(expenses, budgets, monthKey).sort((a, b) => b.percentage - a.percentage),
+    [expenses, budgets, monthKey]
   )
 
   const totalBudget = budgetProgress.reduce((s, b) => s + b.budget, 0)
@@ -23,14 +32,14 @@ export default function BudgetsPage() {
   const handleSave = (categoryId, amount) => {
     dispatch({
       type: 'SET_BUDGET',
-      payload: { category: categoryId, amount: Number(amount), period: 'monthly', rollover: false },
+      payload: { monthKey, category: categoryId, amount: Number(amount), period: 'monthly', rollover: false },
     })
     setShowForm(false)
     setEditingBudget(null)
   }
 
   const handleDelete = (categoryId) => {
-    dispatch({ type: 'REMOVE_BUDGET', payload: categoryId })
+    dispatch({ type: 'REMOVE_BUDGET', payload: { monthKey, category: categoryId } })
   }
 
   const handleEdit = (b) => {
@@ -38,12 +47,69 @@ export default function BudgetsPage() {
     setShowForm(true)
   }
 
+  const handleCopyFromPrevious = () => {
+    const prevKey = format(subMonths(selectedDate, 1), 'yyyy-MM')
+    const prevBudgets = getBudgetsForMonth(budgets, prevKey)
+    if (!prevBudgets || Object.keys(prevBudgets).length === 0) return
+    for (const [cat, config] of Object.entries(prevBudgets)) {
+      dispatch({
+        type: 'SET_BUDGET',
+        payload: { monthKey, category: cat, amount: config.amount, period: config.period || 'monthly', rollover: config.rollover ?? false },
+      })
+    }
+  }
+
+  // For the form: categories that already have a budget this month
+  const existingForMonth = monthBudgets
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Summary */}
+      {/* Month navigation + actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSelectedDate((d) => subMonths(d, 1))}
+            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 cursor-pointer"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="text-center min-w-[150px]">
+            <h2 className="text-sm font-semibold text-slate-900">{monthLabel}</h2>
+            {!hasExplicitBudgets && budgetProgress.length > 0 && (
+              <p className="text-xs text-slate-400">inherited from previous month</p>
+            )}
+          </div>
+          <button
+            onClick={() => setSelectedDate((d) => addMonths(d, 1))}
+            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 cursor-pointer"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {!isCurrentMonth && (
+            <button
+              onClick={() => setSelectedDate(new Date())}
+              className="text-xs text-primary-500 hover:text-primary-700 font-medium cursor-pointer"
+            >
+              Today
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!hasExplicitBudgets && budgetProgress.length > 0 && (
+            <Button variant="ghost" size="sm" icon={Copy} onClick={handleCopyFromPrevious}>
+              Copy to this month
+            </Button>
+          )}
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditingBudget(null); setShowForm(true) }}>
+            Add Budget
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary */}
+      {budgetProgress.length > 0 && (
         <div>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 mb-3">
             {budgetProgress.length} budget{budgetProgress.length !== 1 ? 's' : ''} &middot;{' '}
             <span className="font-number font-medium text-slate-700">
               {formatCurrency(totalSpent, currency)}
@@ -53,24 +119,17 @@ export default function BudgetsPage() {
               {formatCurrency(totalBudget, currency)}
             </span>
           </p>
+          <Card>
+            <ProgressBar
+              value={totalSpent}
+              max={totalBudget}
+              color="auto"
+              size="lg"
+              label="Overall Budget"
+              valueLabel={`${formatCurrency(totalSpent, currency)} / ${formatCurrency(totalBudget, currency)}`}
+            />
+          </Card>
         </div>
-        <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditingBudget(null); setShowForm(true) }}>
-          Add Budget
-        </Button>
-      </div>
-
-      {/* Overall progress */}
-      {budgetProgress.length > 0 && (
-        <Card>
-          <ProgressBar
-            value={totalSpent}
-            max={totalBudget}
-            color="auto"
-            size="lg"
-            label="Overall Budget"
-            valueLabel={`${formatCurrency(totalSpent, currency)} / ${formatCurrency(totalBudget, currency)}`}
-          />
-        </Card>
       )}
 
       {/* Budget cards */}
@@ -101,12 +160,12 @@ export default function BudgetsPage() {
       <Modal
         open={showForm}
         onClose={() => { setShowForm(false); setEditingBudget(null) }}
-        title={editingBudget ? 'Edit Budget' : 'Add Budget'}
+        title={editingBudget ? 'Edit Budget' : `Add Budget - ${monthLabel}`}
         size="sm"
       >
         <BudgetForm
           initial={editingBudget}
-          existingBudgets={budgets}
+          existingBudgets={existingForMonth}
           customCategories={customCategories}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingBudget(null) }}

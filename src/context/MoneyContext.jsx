@@ -15,7 +15,7 @@ import { saveToGoogleDrive, isSignedIn } from '../utils/googleDrive'
 const MoneyContext = createContext(null)
 
 const initialState = {
-  version: 2,
+  version: 3,
   expenses: [],
   income: [],
   budgets: {},
@@ -138,22 +138,37 @@ function reducer(state, action) {
     }
 
     // ─── Budgets ─────────────────────────────────
-    case 'SET_BUDGET':
+    case 'SET_BUDGET': {
+      const { monthKey, category, amount, period, rollover } = action.payload
+      const monthBudgets = state.budgets[monthKey] || {}
       return {
         ...state,
         budgets: {
           ...state.budgets,
-          [action.payload.category]: {
-            amount: action.payload.amount,
-            period: action.payload.period || 'monthly',
-            rollover: action.payload.rollover ?? false,
+          [monthKey]: {
+            ...monthBudgets,
+            [category]: {
+              amount,
+              period: period || 'monthly',
+              rollover: rollover ?? false,
+            },
           },
         },
       }
+    }
 
     case 'REMOVE_BUDGET': {
-      const { [action.payload]: _removed, ...remainingBudgets } = state.budgets
-      return { ...state, budgets: remainingBudgets }
+      const { monthKey: rmKey, category: rmCat } = action.payload
+      const existing = state.budgets[rmKey]
+      if (!existing) return state
+      const { [rmCat]: _removed, ...remainingCats } = existing
+      const newBudgets = { ...state.budgets }
+      if (Object.keys(remainingCats).length === 0) {
+        delete newBudgets[rmKey]
+      } else {
+        newBudgets[rmKey] = remainingCats
+      }
+      return { ...state, budgets: newBudgets }
     }
 
     case 'SET_BUDGETS':
@@ -396,9 +411,10 @@ export function MoneyProvider({ children }) {
     deleteIncome: (id) => dispatch({ type: 'DELETE_INCOME', payload: id }),
     bulkAddIncome: (income) => dispatch({ type: 'BULK_ADD_INCOME', payload: income }),
     // Budgets
-    setBudget: (category, amount, period, rollover) =>
-      dispatch({ type: 'SET_BUDGET', payload: { category, amount, period, rollover } }),
-    removeBudget: (category) => dispatch({ type: 'REMOVE_BUDGET', payload: category }),
+    setBudget: (monthKey, category, amount, period, rollover) =>
+      dispatch({ type: 'SET_BUDGET', payload: { monthKey, category, amount, period, rollover } }),
+    removeBudget: (monthKey, category) =>
+      dispatch({ type: 'REMOVE_BUDGET', payload: { monthKey, category } }),
     // Goals
     addGoal: (goal) => dispatch({ type: 'ADD_GOAL', payload: goal }),
     updateGoal: (goal) => dispatch({ type: 'UPDATE_GOAL', payload: goal }),

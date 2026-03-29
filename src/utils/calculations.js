@@ -116,14 +116,48 @@ export const getTotalByPaymentMethod = (expenses) => {
   }, {})
 }
 
-export const getBudgetProgress = (expenses, budgets) => {
-  const now = new Date()
+/**
+ * Get the effective budgets for a given month key (e.g. "2026-03").
+ * Falls back to the most recent previous month if the given month has no budgets.
+ * Returns a flat { categoryId: { amount, ... } } object.
+ */
+export const getBudgetsForMonth = (budgets, monthKey) => {
+  if (!budgets || typeof budgets !== 'object') return {}
+
+  // New monthly format: budgets["2026-03"] = { food: { amount: 500 } }
+  if (budgets[monthKey]) return budgets[monthKey]
+
+  // Fallback: find the most recent previous month that has data
+  const sortedKeys = Object.keys(budgets).sort()
+  let fallback = null
+  for (const key of sortedKeys) {
+    if (key <= monthKey) fallback = key
+  }
+  return fallback ? budgets[fallback] : {}
+}
+
+/**
+ * Get all month keys that have explicit budget data, sorted ascending.
+ */
+export const getBudgetMonths = (budgets) => {
+  if (!budgets || typeof budgets !== 'object') return []
+  return Object.keys(budgets).filter((k) => /^\d{4}-\d{2}$/.test(k)).sort()
+}
+
+export const getBudgetProgress = (expenses, budgets, monthKey) => {
+  const key = monthKey || format(new Date(), 'yyyy-MM')
+  const [year, month] = key.split('-').map(Number)
+  const monthDate = new Date(year, month - 1, 1)
+  const start = startOfMonth(monthDate)
+  const end = endOfMonth(monthDate)
+
   const monthExpenses = expenses.filter((e) =>
-    isWithinInterval(parseISO(e.date), { start: startOfMonth(now), end: endOfMonth(now) })
+    isWithinInterval(parseISO(e.date), { start, end })
   )
   const totals = getTotalByCategory(monthExpenses)
+  const monthBudgets = getBudgetsForMonth(budgets, key)
 
-  return Object.entries(budgets).map(([category, config]) => {
+  return Object.entries(monthBudgets).map(([category, config]) => {
     const budget = typeof config === 'number' ? config : config.amount || 0
     const spent = totals[category] || 0
     const percentage = budget > 0 ? (spent / budget) * 100 : 0
