@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
-import { PieChart, Plus, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
-import { format, subMonths, addMonths } from 'date-fns'
+import { PieChart, Plus, ChevronLeft, ChevronRight, Copy, ChevronDown } from 'lucide-react'
+import { format, subMonths, addMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
 import { getBudgetProgress, getBudgetsForMonth, formatCurrency } from '@/utils/calculations'
 import { getCategoryById, expenseCategories } from '@/data/categories'
@@ -13,6 +13,7 @@ export default function BudgetsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [expandedCategory, setExpandedCategory] = useState(null)
 
   const monthKey = format(selectedDate, 'yyyy-MM')
   const monthLabel = format(selectedDate, 'MMMM yyyy')
@@ -25,6 +26,15 @@ export default function BudgetsPage() {
     () => getBudgetProgress(expenses, budgets, monthKey).sort((a, b) => b.percentage - a.percentage),
     [expenses, budgets, monthKey]
   )
+
+  // Filter expenses for the selected month
+  const monthExpenses = useMemo(() => {
+    const [year, month] = monthKey.split('-').map(Number)
+    const monthDate = new Date(year, month - 1, 1)
+    const start = startOfMonth(monthDate)
+    const end = endOfMonth(monthDate)
+    return expenses.filter((e) => isWithinInterval(parseISO(e.date), { start, end }))
+  }, [expenses, monthKey])
 
   const totalBudget = budgetProgress.reduce((s, b) => s + b.budget, 0)
   const totalSpent = budgetProgress.reduce((s, b) => s + b.spent, 0)
@@ -57,6 +67,10 @@ export default function BudgetsPage() {
         payload: { monthKey, category: cat, amount: config.amount, period: config.period || 'monthly', rollover: config.rollover ?? false },
       })
     }
+  }
+
+  const toggleExpand = (categoryId) => {
+    setExpandedCategory((prev) => (prev === categoryId ? null : categoryId))
   }
 
   // For the form: categories that already have a budget this month
@@ -150,6 +164,9 @@ export default function BudgetsPage() {
               currency={currency}
               customCategories={customCategories}
               categoryOverrides={categoryOverrides}
+              expenses={monthExpenses.filter((e) => e.category === b.category)}
+              expanded={expandedCategory === b.category}
+              onToggle={() => toggleExpand(b.category)}
               onEdit={() => handleEdit(b)}
               onDelete={() => handleDelete(b.category)}
             />
@@ -175,13 +192,18 @@ export default function BudgetsPage() {
   )
 }
 
-function BudgetCard({ budget, currency, customCategories, categoryOverrides = {}, onEdit, onDelete }) {
+function BudgetCard({ budget, currency, customCategories, categoryOverrides = {}, expenses = [], expanded, onToggle, onEdit, onDelete }) {
   const cat = getCategoryById(budget.category, customCategories, categoryOverrides)
   const remaining = budget.budget - budget.spent
   const isOver = remaining < 0
+  const sorted = useMemo(
+    () => [...expenses].sort((a, b) => b.date.localeCompare(a.date)),
+    [expenses]
+  )
 
   return (
     <Card hover className="flex flex-col">
+      {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat?.color || '#94a3b8' }} />
@@ -194,22 +216,55 @@ function BudgetCard({ budget, currency, customCategories, categoryOverrides = {}
         </div>
       </div>
 
-      <ProgressBar
-        value={budget.spent}
-        max={budget.budget}
-        color="auto"
-        size="md"
-        showLabel={false}
-      />
+      {/* Progress bar — clickable */}
+      <button onClick={onToggle} className="w-full text-left cursor-pointer">
+        <ProgressBar
+          value={budget.spent}
+          max={budget.budget}
+          color="auto"
+          size="md"
+          showLabel={false}
+        />
 
-      <div className="flex items-center justify-between mt-2 text-xs">
-        <span className="font-number text-slate-500">
-          {formatCurrency(budget.spent, currency)} / {formatCurrency(budget.budget, currency)}
-        </span>
-        <span className={`font-number font-medium ${isOver ? 'text-danger-600' : 'text-success-600'}`}>
-          {isOver ? `-${formatCurrency(Math.abs(remaining), currency)} over` : `${formatCurrency(remaining, currency)} left`}
-        </span>
-      </div>
+        <div className="flex items-center justify-between mt-2 text-xs">
+          <span className="font-number text-slate-500">
+            {formatCurrency(budget.spent, currency)} / {formatCurrency(budget.budget, currency)}
+          </span>
+          <div className="flex items-center gap-1">
+            <span className={`font-number font-medium ${isOver ? 'text-danger-600' : 'text-success-600'}`}>
+              {isOver ? `-${formatCurrency(Math.abs(remaining), currency)} over` : `${formatCurrency(remaining, currency)} left`}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+      </button>
+
+      {/* Expenses list */}
+      {expanded && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          {sorted.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-2">No expenses this month</p>
+          ) : (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {sorted.map((e) => (
+                <div key={e.id} className="flex items-center justify-between text-xs py-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-number text-slate-400 shrink-0">
+                      {format(parseISO(e.date), 'MMM d')}
+                    </span>
+                    <span className="text-slate-700 truncate">
+                      {e.description || e.merchant || 'No description'}
+                    </span>
+                  </div>
+                  <span className="font-number font-medium text-slate-900 shrink-0 ml-2">
+                    {formatCurrency(e.amount, currency)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   )
 }
