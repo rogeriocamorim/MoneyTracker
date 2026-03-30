@@ -329,3 +329,44 @@ export const getAllAnnualBillStatuses = (annualBills, expenses, year = new Date(
       return (a.daysUntilDue ?? 999) - (b.daysUntilDue ?? 999)
     })
 }
+
+/**
+ * Calculate monthly savings progress for an annual bill.
+ * Uses calendar-based tracking: monthlyAmount = bill / 12,
+ * savedSoFar = monthlyAmount × months elapsed this year.
+ */
+export const getAnnualBillSavings = (bill, year = new Date().getFullYear()) => {
+  if (!bill.savingsEnabled) return null
+  const monthlyAmount = bill.amount / 12
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  // If looking at a past year, all 12 months elapsed; future year, 0
+  let monthsElapsed
+  if (year < currentYear) {
+    monthsElapsed = 12
+  } else if (year > currentYear) {
+    monthsElapsed = 0
+  } else {
+    monthsElapsed = now.getMonth() + 1 // Jan=1 .. Dec=12
+  }
+  const savedSoFar = monthlyAmount * monthsElapsed
+  const percentage = bill.amount > 0 ? Math.min((savedSoFar / bill.amount) * 100, 100) : 0
+
+  return {
+    monthlyAmount,
+    monthsElapsed,
+    savedSoFar,
+    remaining: Math.max(0, bill.amount - savedSoFar),
+    percentage,
+    onTrack: savedSoFar >= monthlyAmount * monthsElapsed,
+  }
+}
+
+/**
+ * Get total monthly set-aside across all savings-enabled annual bills.
+ */
+export const getTotalMonthlySetAside = (annualBills) => {
+  return annualBills
+    .filter((b) => b.savingsEnabled)
+    .reduce((sum, b) => sum + b.amount / 12, 0)
+}

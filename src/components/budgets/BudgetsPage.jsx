@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
-import { PieChart, Plus, ChevronLeft, ChevronRight, Copy, ChevronDown, CalendarClock, Trash2, Pencil, Check, AlertTriangle, Clock } from 'lucide-react'
+import { PieChart, Plus, ChevronLeft, ChevronRight, Copy, ChevronDown, CalendarClock, Trash2, Pencil, Check, AlertTriangle, Clock, PiggyBank } from 'lucide-react'
 import { format, subMonths, addMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns'
 import { useMoney } from '@/context/MoneyContext'
-import { getBudgetProgress, getBudgetsForMonth, formatCurrency, getAllAnnualBillStatuses } from '@/utils/calculations'
+import { getBudgetProgress, getBudgetsForMonth, formatCurrency, getAllAnnualBillStatuses, getAnnualBillSavings, getTotalMonthlySetAside } from '@/utils/calculations'
 import { getCategoryById, expenseCategories } from '@/data/categories'
 import { Button, Modal, EmptyState, Select, Input, ProgressBar, Card } from '@/components/ui'
 
@@ -49,6 +49,7 @@ export default function BudgetsPage() {
   )
   const totalAnnualBills = annualBills.reduce((s, b) => s + b.amount, 0)
   const paidBillsTotal = billStatuses.filter((b) => b.status === 'paid').reduce((s, b) => s + b.bill.amount, 0)
+  const monthlySetAside = useMemo(() => getTotalMonthlySetAside(annualBills), [annualBills])
 
   const totalBudget = budgetProgress.reduce((s, b) => s + b.budget, 0)
   const totalSpent = budgetProgress.reduce((s, b) => s + b.spent, 0)
@@ -109,6 +110,13 @@ export default function BudgetsPage() {
     dispatch({
       type: 'UPDATE_ANNUAL_BILL',
       payload: { id: bill.id, paidManually: !bill.paidManually },
+    })
+  }
+
+  const handleToggleSavings = (bill) => {
+    dispatch({
+      type: 'UPDATE_ANNUAL_BILL',
+      payload: { id: bill.id, savingsEnabled: !bill.savingsEnabled },
     })
   }
 
@@ -231,6 +239,14 @@ export default function BudgetsPage() {
                 <span className="font-number font-medium text-slate-700">
                   {formatCurrency(totalAnnualBills, currency)}
                 </span>
+                {monthlySetAside > 0 && (
+                  <>
+                    {' '}&middot; Set aside{' '}
+                    <span className="font-number font-medium text-primary-600">
+                      {formatCurrency(monthlySetAside, currency)}/mo
+                    </span>
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -257,11 +273,13 @@ export default function BudgetsPage() {
                 daysUntilDue={daysUntilDue}
                 matchedExpense={matchedExpense}
                 currency={currency}
+                currentYear={currentYear}
                 customCategories={customCategories}
                 categoryOverrides={categoryOverrides}
                 onEdit={() => { setEditingBill(bill); setShowBillForm(true) }}
                 onDelete={() => setDeletingBill(bill)}
                 onTogglePaid={() => handleTogglePaid(bill)}
+                onToggleSavings={() => handleToggleSavings(bill)}
               />
             ))}
           </div>
@@ -452,10 +470,11 @@ const statusConfig = {
   unknown: { label: 'No date', color: 'bg-slate-100 text-slate-500', icon: CalendarClock },
 }
 
-function AnnualBillRow({ bill, status, daysUntilDue, matchedExpense, currency, customCategories, categoryOverrides, onEdit, onDelete, onTogglePaid }) {
+function AnnualBillRow({ bill, status, daysUntilDue, matchedExpense, currency, currentYear, customCategories, categoryOverrides, onEdit, onDelete, onTogglePaid, onToggleSavings }) {
   const cat = getCategoryById(bill.category, customCategories, categoryOverrides)
   const cfg = statusConfig[status] || statusConfig.unknown
   const StatusIcon = cfg.icon
+  const savings = useMemo(() => getAnnualBillSavings(bill, currentYear), [bill, currentYear])
 
   const dueLabel = (() => {
     if (status === 'paid') {
@@ -472,55 +491,89 @@ function AnnualBillRow({ bill, status, daysUntilDue, matchedExpense, currency, c
   })()
 
   return (
-    <Card className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-      {/* Left: category dot + name + amount */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat?.color || '#94a3b8' }} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900 truncate">{bill.name}</span>
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${cfg.color}`}>
-              <StatusIcon className="w-3 h-3" />
-              {cfg.label}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-number font-medium text-slate-700">{formatCurrency(bill.amount, currency)}</span>
-            <span>&middot;</span>
-            <span>{cat?.name || bill.category}</span>
-            {bill.dueDate && (
-              <>
-                <span>&middot;</span>
-                <span>{format(parseISO(bill.dueDate), 'MMM d')}</span>
-              </>
+    <Card className="flex flex-col gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        {/* Left: category dot + name + amount */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat?.color || '#94a3b8' }} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900 truncate">{bill.name}</span>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${cfg.color}`}>
+                <StatusIcon className="w-3 h-3" />
+                {cfg.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="font-number font-medium text-slate-700">{formatCurrency(bill.amount, currency)}</span>
+              <span>&middot;</span>
+              <span>{cat?.name || bill.category}</span>
+              {bill.dueDate && (
+                <>
+                  <span>&middot;</span>
+                  <span>{format(parseISO(bill.dueDate), 'MMM d')}</span>
+                </>
+              )}
+            </div>
+            {dueLabel && (
+              <p className="text-[11px] text-slate-400 mt-0.5">{dueLabel}</p>
             )}
           </div>
-          {dueLabel && (
-            <p className="text-[11px] text-slate-400 mt-0.5">{dueLabel}</p>
-          )}
+        </div>
+
+        {/* Right: actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onToggleSavings}
+            className={`text-xs px-2 py-1 rounded-md cursor-pointer flex items-center gap-1 ${
+              bill.savingsEnabled
+                ? 'bg-primary-50 text-primary-600 hover:bg-primary-100'
+                : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+            }`}
+            title={bill.savingsEnabled ? 'Disable savings tracking' : 'Enable savings tracking'}
+          >
+            <PiggyBank className="w-3 h-3" />
+            {bill.savingsEnabled ? 'Saving' : 'Save'}
+          </button>
+          <button
+            onClick={onTogglePaid}
+            className={`text-xs px-2 py-1 rounded-md cursor-pointer ${
+              status === 'paid'
+                ? 'bg-success-50 text-success-600 hover:bg-success-100'
+                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+            }`}
+            title={status === 'paid' ? 'Mark as unpaid' : 'Mark as paid'}
+          >
+            {status === 'paid' ? 'Undo' : 'Mark Paid'}
+          </button>
+          <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-primary-500 cursor-pointer" title="Edit">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-danger-500 cursor-pointer" title="Delete">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Right: actions */}
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          onClick={onTogglePaid}
-          className={`text-xs px-2 py-1 rounded-md cursor-pointer ${
-            status === 'paid'
-              ? 'bg-success-50 text-success-600 hover:bg-success-100'
-              : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-          }`}
-          title={status === 'paid' ? 'Mark as unpaid' : 'Mark as paid'}
-        >
-          {status === 'paid' ? 'Undo' : 'Mark Paid'}
-        </button>
-        <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-primary-500 cursor-pointer" title="Edit">
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-danger-500 cursor-pointer" title="Delete">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      {/* Savings progress bar */}
+      {savings && (
+        <div className="border-t border-slate-100 pt-2">
+          <ProgressBar
+            value={savings.savedSoFar}
+            max={bill.amount}
+            color="auto"
+            size="sm"
+            showLabel={false}
+          />
+          <p className="text-[11px] text-slate-500 mt-1 font-number">
+            {formatCurrency(savings.savedSoFar, currency)} saved
+            {' '}({formatCurrency(savings.monthlyAmount, currency)}/mo &times; {savings.monthsElapsed} month{savings.monthsElapsed !== 1 ? 's' : ''})
+            {savings.remaining > 0 && (
+              <span className="text-slate-400"> &middot; {formatCurrency(savings.remaining, currency)} to go</span>
+            )}
+          </p>
+        </div>
+      )}
     </Card>
   )
 }
@@ -533,11 +586,14 @@ function AnnualBillForm({ initial, customCategories = [], categoryOverrides = {}
   const [category, setCategory] = useState(initial?.category || '')
   const [dueDate, setDueDate] = useState(initial?.dueDate || '')
   const [notes, setNotes] = useState(initial?.notes || '')
+  const [savingsEnabled, setSavingsEnabled] = useState(initial?.savingsEnabled || false)
+
+  const monthlyAmount = amount && Number(amount) > 0 ? Number(amount) / 12 : 0
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!name || !amount || Number(amount) <= 0 || !category) return
-    onSave({ name, amount: Number(amount), category, dueDate: dueDate || null, notes })
+    onSave({ name, amount: Number(amount), category, dueDate: dueDate || null, notes, savingsEnabled })
   }
 
   return (
@@ -579,6 +635,23 @@ function AnnualBillForm({ initial, customCategories = [], categoryOverrides = {}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Any additional notes..."
       />
+      {/* Savings toggle */}
+      <label className="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={savingsEnabled}
+          onChange={(e) => setSavingsEnabled(e.target.checked)}
+          className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+        />
+        <div>
+          <span className="text-sm font-medium text-slate-700">Track monthly savings</span>
+          {monthlyAmount > 0 && (
+            <p className="text-xs text-slate-500">
+              Set aside <span className="font-number font-medium text-primary-600">{formatCurrency(monthlyAmount, '$')}/mo</span> toward this bill
+            </p>
+          )}
+        </div>
+      </label>
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
         <Button variant="primary" type="submit">{initial ? 'Update' : 'Add Bill'}</Button>
